@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "caiyun-weather/schemas/brief.json",
+  "title": "Caiyun Weather Brief",
+  "description": "结构化决策数据：供 LLM 按 SKILL.md 骨架渲染完整播报，也可作为非中文/轻量卡片场景的直接数据源。",
+  "type": "object",
+  "required": ["location", "headline", "one_liner", "keywords", "temp", "sky", "wind", "rain", "umbrella", "risks"],
+  "properties": {
+    "location": {"type": ["string", "null"]},
+    "location_quality": {"type": ["string", "null"], "enum": ["high", "medium", "low", "unknown", null]},
+    "headline": {"type": "string"},
+    "one_liner": {"type": "string"},
+    "keywords": {
+      "type": "array",
+      "description": "2–4 个出门关键词，可直接作为卡片顶部标签。",
+      "items": {"type": "string"},
+      "minItems": 1,
+      "maxItems": 4
+    },
+    "temp": {
+      "type": "object",
+      "properties": {
+        "now": {"type": ["number", "null"]},
+        "apparent": {"type": ["number", "null"]},
+        "today_min": {"type": ["number", "null"]},
+        "today_max": {"type": ["number", "null"]}
+      }
+    },
+    "sky": {
+      "type": "object",
+      "properties": {
+        "code": {"type": ["string", "null"]},
+        "label": {"type": "string"},
+        "emoji": {"type": "string"}
+      }
+    },
+    "wind": {
+      "type": "object",
+      "properties": {
+        "speed": {"type": ["number", "null"]},
+        "direction": {"type": ["string", "null"]},
+        "level": {"type": "string", "enum": ["风小", "有风", "风感明显", "风力较大", "强风", "未知"]},
+        "action": {"type": "string"}
+      }
+    },
+    "humidity": {
+      "type": "object",
+      "properties": {
+        "pct": {"type": ["integer", "null"]},
+        "feel": {
+          "type": ["string", "null"],
+          "enum": ["湿冷", "潮湿", "闷热", "略闷", "偏潮", "偏干", "适宜", null]
+        }
+      }
+    },
+    "uv": {
+      "type": "object",
+      "properties": {
+        "level": {"type": "string", "enum": ["弱", "中等", "强", "很强", "未知"]},
+        "value": {"type": ["number", "null"]},
+        "advice": {"type": "string"}
+      }
+    },
+    "aqi": {
+      "type": "object",
+      "properties": {
+        "level": {"type": "string", "enum": ["优", "良", "轻度污染", "中度污染", "重度污染", "未知"]},
+        "value": {"type": ["integer", "null"]}
+      }
+    },
+    "rain": {
+      "type": "object",
+      "description": "windows 已按严重度（峰值雨量 + 概率）排好序，LLM 可直接取 windows[0] 作为主提示。",
+      "properties": {
+        "will_rain_today": {"type": "boolean"},
+        "next_early_morning_rain": {"type": "boolean"},
+        "day_rain": {"type": "boolean"},
+        "night_rain": {"type": "boolean"},
+        "peak_precip": {"type": "number"},
+        "peak_intensity": {"type": ["string", "null"]},
+        "windows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {"type": "string"},
+              "datetime": {"type": ["string", "null"]},
+              "day_offset": {"type": ["integer", "null"]},
+              "hour": {"type": ["integer", "null"]},
+              "intensity": {"type": "string"},
+              "intensity_by_precip": {"type": "string"},
+              "precip": {"type": ["number", "null"]},
+              "prob_pct": {"type": ["integer", "null"]},
+              "duration_hours": {"type": ["integer", "null"]},
+              "end_hour": {"type": ["integer", "null"]},
+              "end_datetime": {"type": ["string", "null"]},
+              "source": {"type": "string", "enum": ["slot", "abnormal"]}
+            }
+          }
+        }
+      }
+    },
+    "umbrella": {
+      "type": "object",
+      "description": "结构化伞具建议：code 是动作枚举，text 是默认中文，LLM 可自己改写措辞。",
+      "required": ["code", "text"],
+      "properties": {
+        "code": {"type": "string", "enum": ["carry_today", "carry_tomorrow_morning", "none"]},
+        "text": {"type": "string"}
+      }
+    },
+    "alerts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {"type": ["string", "null"]},
+          "desc": {"type": ["string", "null"]},
+          "level": {"type": ["string", "null"]},
+          "color": {"type": "string"},
+          "emoji": {"type": "string"},
+          "pub_date": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "description": "所有风险聚合数组，已按 severity 从高到低排好序；是「需要特别注意」章节的唯一数据源。",
+      "items": {
+        "type": "object",
+        "required": ["kind", "severity", "headline"],
+        "properties": {
+          "kind": {"type": "string", "enum": ["alert", "rain", "wind", "aqi", "uv", "humidity", "temperature", "visibility"]},
+          "severity": {"type": "string", "enum": ["info", "low", "medium", "high", "critical"]},
+          "headline": {"type": "string"},
+          "detail": {"type": "object"}
+        }
+      }
+    },
+    "daylight": {
+      "type": ["object", "null"],
+      "description": "今日日出/日落，及当前是否白天。用于「几点日出」「现在是白天吗」类查询。",
+      "properties": {
+        "sunrise": {"type": ["string", "null"], "description": "HH:MM 本地时间"},
+        "sunset": {"type": ["string", "null"], "description": "HH:MM 本地时间"},
+        "is_daytime": {"type": ["boolean", "null"]}
+      }
+    },
+    "minutely": {
+      "type": ["object", "null"],
+      "description": "彩云逐分钟降雨摘要；仅**付费 token**可用（available=true）。免费 token 下 available=false，详细字段均为 null，LLM 应改用 rain_now / keypoint_hourly。",
+      "properties": {
+        "available": {"type": "boolean", "description": "true 表示接口返回了逐分钟数据（付费 token）；false 表示该能力不可用"},
+        "status": {"type": ["string", "null"]},
+        "description": {"type": ["string", "null"]},
+        "has_rain_in_2h": {"type": ["boolean", "null"]},
+        "starts_in_minutes": {"type": ["integer", "null"], "description": "当前不在下雨时，多少分钟后开始；在下雨或 available=false 时为 null"},
+        "stops_in_minutes": {"type": ["integer", "null"], "description": "当前在下雨时，还有多少分钟停；不在下雨或 available=false 时为 null"},
+        "peak_intensity": {"type": ["number", "null"], "description": "未来 2h 内最大 mm/h"},
+        "peak_in_minutes": {"type": ["integer", "null"]}
+      }
+    },
+    "rain_now": {
+      "type": "object",
+      "description": "「现在/附近是否在下雨」的主信号，来自 realtime.precipitation 的 local + nearest；免费 token 也可用。LLM 在 minutely.available=false 时应优先依赖这个字段。",
+      "properties": {
+        "is_raining": {"type": ["boolean", "null"], "description": "脚下网格雨强 > 0.03 mm/h 为 true"},
+        "local_intensity": {"type": ["number", "null"], "description": "脚下网格雨强 mm/h"},
+        "nearest_intensity": {"type": ["number", "null"], "description": "最近雨带雨强 mm/h"},
+        "nearest_distance_km": {"type": ["number", "null"], "description": "最近雨带距离 km；0 = 脚下就是雨中心"},
+        "approaching": {"type": "boolean", "description": "脚下不在下但 5km 内有雨带 → 雨在靠近"},
+        "intensifying": {"type": "boolean", "description": "脚下在下且附近雨强更大 → 雨在变大"},
+        "source": {"type": "string", "enum": ["realtime"]}
+      }
+    },
+    "today_split": {
+      "type": "object",
+      "description": "今日白天（08-20）/ 夜间（20-32）分时段汇总，来自彩云 daily.skycon_08h_20h / skycon_20h_32h 与对应 precipitation 数组。用于「今晚会下雨吗/白天还下雨吗」。",
+      "properties": {
+        "day": {
+          "type": "object",
+          "properties": {
+            "skycon": {"type": ["string", "null"]},
+            "label": {"type": ["string", "null"]},
+            "emoji": {"type": ["string", "null"]},
+            "precip_prob": {"type": ["integer", "null"]},
+            "precip_max": {"type": ["number", "null"]},
+            "precip_avg": {"type": ["number", "null"]}
+          }
+        },
+        "night": {
+          "type": "object",
+          "properties": {
+            "skycon": {"type": ["string", "null"]},
+            "label": {"type": ["string", "null"]},
+            "emoji": {"type": ["string", "null"]},
+            "precip_prob": {"type": ["integer", "null"]},
+            "precip_max": {"type": ["number", "null"]},
+            "precip_avg": {"type": ["number", "null"]}
+          }
+        },
+        "precip_max": {"type": ["number", "null"], "description": "今日全天峰值雨强 mm/h"},
+        "precip_avg": {"type": ["number", "null"], "description": "今日全天平均雨强 mm/h"}
+      }
+    },
+    "visibility": {
+      "type": "object",
+      "description": "能见度（km）与分级。<1km 雾天通常会进 risks[]。",
+      "properties": {
+        "km": {"type": ["number", "null"]},
+        "level": {"type": ["string", "null"], "enum": ["极差", "差", "一般", "良好", "极佳", null]}
+      }
+    },
+    "life_index": {
+      "type": "object",
+      "description": "彩云生活指数完整集合：ultraviolet/comfort/coldRisk/dressing/carWashing。LLM 据此回答「今天适合洗车么/会感冒么/穿什么」。",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "desc": {"type": ["string", "null"]},
+          "index": {"type": ["integer", "number", "string", "null"]}
+        }
+      }
+    },
+    "keypoint": {"type": ["string", "null"]},
+    "keypoint_hourly": {"type": ["string", "null"], "description": "彩云 hourly.description：高密度中文描述，跨度比 forecast_keypoint 长、免费 token 也能拿到。minutely.available=false 时优先引用这一字段回答「还会下多久」「几点雨停」。"
+  }
+}

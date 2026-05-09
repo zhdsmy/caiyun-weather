@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "caiyun-weather/schemas/weather.json",
+  "title": "Universal Weather Data",
+  "type": "object",
+  "required": ["location", "lng", "lat", "date", "provider", "units", "timezone", "realtime", "today", "hourly", "days"],
+  "$defs": {
+    "providerSource": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string"},
+        "name": {"type": "string"},
+        "api_version": {"type": "string"}
+      },
+      "required": ["id", "name"]
+    },
+    "hourlySlot": {
+      "type": "object",
+      "properties": {
+        "hour": {"type": ["integer", "null"]},
+        "datetime": {"type": ["string", "null"]},
+        "day_offset": {"type": ["integer", "null"]},
+        "skycon": {"type": ["string", "null"]},
+        "temp": {"type": ["number", "null"]},
+        "wind_spd": {"type": ["number", "null"]},
+        "wind_dir": {"type": ["number", "null"]},
+        "precip": {"type": ["number", "null"]},
+        "precip_prob": {"type": ["number", "null"]},
+        "precip_prob_pct": {"type": ["integer", "null"]}
+      }
+    },
+    "abnormal": {
+      "type": "object",
+      "properties": {
+        "type": {"type": "string", "enum": ["rain", "wind"]},
+        "hour": {"type": ["integer", "null"]},
+        "datetime": {"type": ["string", "null"]},
+        "day_offset": {"type": ["integer", "null"]},
+        "precip": {"type": ["number", "null"]},
+        "duration_hours": {"type": ["integer", "null"]},
+        "end_hour": {"type": ["integer", "null"]},
+        "end_datetime": {"type": ["string", "null"]},
+        "end_day_offset": {"type": ["integer", "null"]},
+        "wind_spd": {"type": ["number", "null"]}
+      },
+      "required": ["type"]
+    },
+    "day": {
+      "type": "object",
+      "properties": {
+        "date": {"type": "string"},
+        "offset": {"type": "integer"},
+        "skycon": {"type": ["string", "null"]},
+        "t_min": {"type": ["number", "null"]},
+        "t_max": {"type": ["number", "null"]},
+        "precip_prob": {"type": ["integer", "null"]},
+        "aqi": {"type": ["number", "null"]},
+        "uv": {"type": ["number", "null"]}
+      },
+      "required": ["date", "offset"]
+    },
+    "alert": {
+      "type": "object",
+      "properties": {
+        "level": {"type": ["string", "null"]},
+        "title": {"type": ["string", "null"]},
+        "desc": {"type": ["string", "null"]},
+        "pub_date": {"type": ["string", "null"]}
+      }
+    }
+  },
+  "properties": {
+    "location": {"type": "string"},
+    "lng": {"type": "number"},
+    "lat": {"type": "number"},
+    "geocode": {"type": ["object", "null"]},
+    "provider": {
+      "type": "object",
+      "properties": {
+        "weather": {"$ref": "#/$defs/providerSource"},
+        "geocode": {"$ref": "#/$defs/providerSource"},
+        "attribution": {"type": "string"}
+      },
+      "required": ["weather", "attribution"]
+    },
+    "units": {
+      "type": "object",
+      "properties": {
+        "temperature": {"type": "string"},
+        "apparent_temperature": {"type": "string"},
+        "wind_speed": {"type": "string"},
+        "precipitation": {"type": "string"},
+        "visibility": {"type": "string"},
+        "pressure": {"type": "string"},
+        "humidity": {"type": "string"},
+        "precip_probability": {"type": "string"}
+      }
+    },
+    "timezone": {
+      "type": "object",
+      "properties": {
+        "offset_hours": {"type": ["number", "null"]},
+        "name": {"type": ["string", "null"]}
+      }
+    },
+    "output_dir": {"type": "string"},
+    "cache_used": {"type": "boolean"},
+    "mock": {"type": ["string", "null"], "enum": ["sunny", "rain", "alert", null]},
+    "date": {"type": "string"},
+    "date_cn": {"type": "string"},
+    "weekday": {"type": "string"},
+    "generated": {"type": "string"},
+    "keypoint": {"type": ["string", "null"]},
+    "alerts": {"type": "array", "items": {"$ref": "#/$defs/alert"}},
+    "realtime": {
+      "type": "object",
+      "properties": {
+        "skycon": {"type": ["string", "null"]},
+        "temp": {"type": ["number", "null"]},
+        "app_temp": {"type": ["number", "null"]},
+        "humidity": {"type": ["number", "null"]},
+        "humidity_pct": {"type": ["integer", "null"]},
+        "wind_dir": {"type": ["number", "null"]},
+        "wind_spd": {"type": ["number", "null"]},
+        "precip": {"type": ["number", "null"]},
+        "visibility": {"type": ["number", "null"]},
+        "pressure": {"type": ["number", "null"]},
+        "pressure_hpa": {"type": ["number", "null"]},
+        "aqi": {"type": ["number", "null"]},
+        "pm25": {"type": ["number", "null"]},
+        "uv": {"type": ["number", "string", "null"]},
+        "uv_desc": {"type": ["string", "null"]},
+        "comfort": {"type": ["string", "null"]}
+      }
+    },
+    "today": {
+      "type": "object",
+      "properties": {
+        "t_min": {"type": ["number", "null"]},
+        "t_max": {"type": ["number", "null"]},
+        "skycon": {"type": ["string", "null"]},
+        "aqi": {"type": ["number", "null"]},
+        "precip_prob": {"type": ["integer", "null"]}
+      }
+    },
+    "hourly": {
+      "type": "object",
+      "properties": {
+        "morning_rush": {"anyOf": [{"$ref": "#/$defs/hourlySlot"}, {"type": "null"}]},
+        "noon": {"anyOf": [{"$ref": "#/$defs/hourlySlot"}, {"type": "null"}]},
+        "evening_rush": {"anyOf": [{"$ref": "#/$defs/hourlySlot"}, {"type": "null"}]},
+        "night": {"anyOf": [{"$ref": "#/$defs/hourlySlot"}, {"type": "null"}]},
+        "day_rain": {"type": "boolean"},
+        "night_rain": {"type": "boolean"},
+        "today_day_rain": {"type": "boolean"},
+        "next_early_morning_rain": {"type": "boolean"},
+        "abnormal": {"type": "array", "items": {"$ref": "#/$defs/abnormal"}}
+      }
+    },
+    "days": {"type": "array", "items": {"$ref": "#/$defs/day"}},
+    "save": {"type": ["object", "null"]}
+  }
+}

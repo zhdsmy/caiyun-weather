@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "caiyun-weather/schemas/geocode.json",
+  "title": "Caiyun Weather Geocode",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["mode", "query", "count", "results"],
+      "properties": {
+        "mode": {"const": "geo"},
+        "query": {"type": "object"},
+        "count": {"type": "integer"},
+        "results": {"type": "array"},
+        "best": {"type": ["object", "null"]}
+      }
+    },
+    {
+      "type": "object",
+      "required": ["mode", "query", "result"],
+      "properties": {
+        "mode": {"const": "regeo"},
+        "query": {"type": "object"},
+        "result": {"type": "object"}
+      }
+    },
+    {
+      "type": "object",
+      "required": ["error"],
+      "properties": {
+        "error": {"type": "string"},
+        "hint": {"type": "string"}
+      }
+    }
+  ]
+}

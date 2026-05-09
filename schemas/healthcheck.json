@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "caiyun-weather/schemas/healthcheck.json",
+  "title": "Caiyun Weather Healthcheck",
+  "type": "object",
+  "required": ["mode", "env", "caiyun", "amap"],
+  "properties": {
+    "mode": {"const": "check"},
+    "env": {
+      "type": "object",
+      "properties": {
+        "CAIYUN_TOKEN": {"type": ["string", "null"]},
+        "AMAP_KEY": {"type": ["string", "null"]},
+        "WEATHER_DEFAULT_CITY": {"type": ["string", "null"]},
+        "WEATHER_OUTPUT_DIR": {"type": "string"},
+        "loaded_env_files": {"type": "array"}
+      }
+    },
+    "caiyun": {
+      "type": "object",
+      "properties": {
+        "configured": {"type": "boolean"},
+        "ok": {"type": ["boolean", "null"]},
+        "detail": {"type": ["string", "null"]}
+      }
+    },
+    "amap": {
+      "type": "object",
+      "properties": {
+        "configured": {"type": "boolean"},
+        "ok": {"type": ["boolean", "null"]},
+        "detail": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

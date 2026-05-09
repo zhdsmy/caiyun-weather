@@ -1,0 +1,100 @@
+{
+  "name": "caiyun-weather",
+  "version": "4.2.0",
+  "description": "通用天气查询 Skill：脚本只提供结构化天气数据与决策字段（JSON / brief / short，含日出日落、逐分钟降雨、生活指数、能见度分级），完整天气播报由 AI 根据 SKILL.md 的骨架渲染；--save 通过 stdin 接收 AI 写好的 Markdown 落盘。",
+  "language": "zh-CN",
+  "runtime": {
+    "python_min": "3.10",
+    "dependencies": []
+  },
+  "entrypoints": [
+    {
+      "id": "weather",
+      "summary": "查询天气，可选地址或经纬度；输出包含 provider、units、timezone 元数据。",
+      "command": ["python3", "scripts/weather_data.py"],
+      "args": [
+        {"name": "--address", "required": false},
+        {"name": "--city", "required": false},
+        {"name": "--lng", "required": false},
+        {"name": "--lat", "required": false},
+        {"name": "--location", "required": false},
+        {"name": "--tz", "required": false},
+        {"name": "--days", "required": false, "description": "日级预报天数（1–15），默认 7"},
+        {"name": "--format", "required": false, "choices": ["json", "brief", "short"], "default": "json"},
+        {"name": "--save", "required": false},
+        {"name": "--mock", "required": false, "choices": ["sunny", "rain", "alert"]},
+        {"name": "--cache-seconds", "required": false},
+        {"name": "--no-cache", "required": false}
+      ],
+      "schema": "schemas/weather.json"
+    },
+    {
+      "id": "brief",
+      "summary": "返回结构化决策数据（risks/rain/windows/keywords 等），供 LLM 按 SKILL.md 骨架渲染完整播报；也可作为非中文/轻量卡片场景的数据源。",
+      "command": ["python3", "scripts/weather_data.py", "--format", "brief"],
+      "schema": "schemas/brief.json"
+    },
+    {
+      "id": "short",
+      "summary": "返回 3–6 行中文直接回答。",
+      "command": ["python3", "scripts/weather_data.py", "--format", "short"],
+      "output": "text/plain"
+    },
+    {
+      "id": "save",
+      "summary": "把 LLM 渲染好的播报 Markdown 通过 stdin 落盘；不传 --save 不写盘，传 --save /path/to.md 使用指定路径。",
+      "command": ["python3", "scripts/weather_data.py", "--save"],
+      "stdin": "text/markdown"
+    },
+    {
+      "id": "geocode",
+      "summary": "地址 ↔ 经纬度互转。",
+      "command": ["python3", "scripts/geocode.py"],
+      "schema": "schemas/geocode.json"
+    },
+    {
+      "id": "healthcheck",
+      "summary": "验证彩云 token、高德 key 是否可用，不调用真实天气。",
+      "command": ["python3", "scripts/weather_data.py", "--check"],
+      "schema": "schemas/healthcheck.json"
+    },
+    {
+      "id": "mock",
+      "summary": "按当前时间生成内置示例数据，便于离线演示和 CI。",
+      "command": ["python3", "scripts/weather_data.py", "--mock"],
+      "args": [
+        {"name": "scenario", "required": true, "choices": ["sunny", "rain", "alert"]}
+      ]
+    }
+  ],
+  "env": {
+    "required_for": {
+      "weather_by_address": ["CAIYUN_TOKEN", "AMAP_KEY"],
+      "weather_by_coord": ["CAIYUN_TOKEN"],
+      "geocode": ["AMAP_KEY"]
+    },
+    "optional": [
+      "WEATHER_LNG",
+      "WEATHER_LAT",
+      "WEATHER_LOCATION",
+      "WEATHER_ADDRESS",
+      "WEATHER_CITY",
+      "WEATHER_DEFAULT_CITY",
+      "DEFAULT_CITY",
+      "WEATHER_TZ",
+      "WEATHER_DAILY_STEPS",
+      "WEATHER_OUTPUT_DIR",
+      "WEATHER_CACHE_SECONDS",
+      "WEATHER_CACHE_DIR",
+      "WEATHER_LOG_PATH",
+      "LONGITUDE",
+      "LATITUDE"
+    ],
+    "loader": "host-managed: 由调用方所在的 AI 工具或 shell 注入；脚本本身不读取 .env 文件。"
+  },
+  "writes": {
+    "report_default_dir": "~/.cache/caiyun-weather/outputs",
+    "cache_default_dir": "~/.cache/caiyun-weather",
+    "writes_files": "only when --save is passed; --save reads the report Markdown from stdin"
+  }
+}
