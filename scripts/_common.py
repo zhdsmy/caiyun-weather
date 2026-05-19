@@ -22,8 +22,53 @@ from typing import Any
 DEFAULT_ENV_SEARCH = ()  # 脚本不再自行加载 .env，保留常量以兼容旧引用
 
 
+def _error_code_from_message(message: str) -> str:
+    if "缺少必填环境变量" in message or "缺少高德" in message or "高德 Web 服务 Key" in message:
+        return "missing_env"
+    if "缺少定位信息" in message:
+        return "missing_location"
+    if "经纬度" in message:
+        return "invalid_location"
+    if "预报天数" in message or "WEATHER_DAILY_STEPS" in message:
+        return "invalid_days"
+    if "WEATHER_TZ" in message:
+        return "invalid_timezone"
+    if "高德 API" in message:
+        return "amap_error"
+    if "彩云 API" in message:
+        return "caiyun_error"
+    if "HTTP" in message:
+        return "http_error"
+    if "网络请求失败" in message:
+        return "network_error"
+    if "超时" in message:
+        return "timeout"
+    if "非 JSON" in message:
+        return "invalid_response"
+    return "error"
+
+
+def normalize_error_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Normalize legacy {"error": "..."} payloads to a structured error object."""
+    if "error" not in payload or isinstance(payload.get("error"), dict):
+        return payload
+
+    raw = dict(payload)
+    message = str(raw.pop("error"))
+    hint = raw.pop("hint", None)
+    code = str(raw.pop("error_code", "") or _error_code_from_message(message))
+    error: dict[str, Any] = {"code": code, "message": message}
+    if hint:
+        error["hint"] = hint
+    if raw:
+        error["details"] = raw
+    return {"ok": False, "error": error}
+
+
 def emit(payload: dict[str, Any], *, exit_code: int = 0) -> None:
     """始终向 stdout 输出可解析 JSON，便于 LLM/Cron 消费。"""
+    if exit_code:
+        payload = normalize_error_payload(payload)
     json.dump(payload, sys.stdout, ensure_ascii=False, indent=2)
     sys.stdout.write("\n")
     if exit_code:

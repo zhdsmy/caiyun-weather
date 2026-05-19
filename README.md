@@ -9,7 +9,7 @@
 - **Weather queries**: Query realtime weather, today's summary, hourly forecasts, and daily forecasts by address or coordinates.
 - **Geocoding**: Convert structured addresses to coordinates, and reverse coordinates back to address information.
 - **Decision fields**: Pre-classified rain, umbrella, wind, UV, AQI, humidity, visibility, and life-index signals.
-- **Full reports**: Output `brief` decision JSON for an AI agent to render complete Markdown weather reports using `SKILL.md`.
+- **Full reports**: Output same-request `bundle` data (`json` + `brief`) for an AI agent to render complete Markdown weather reports using `SKILL.md`.
 - **Offline demos**: Built-in `sunny`, `rain`, and `alert` mock scenarios for demos, debugging, and CI.
 - **Safety boundary**: Scripts do not read `.env` files and do not print raw tokens; environment variables are injected by the caller.
 
@@ -37,11 +37,11 @@
 | `WEATHER_OUTPUT_DIR` | Default output directory for `--save` | Optional |
 | `WEATHER_CACHE_DIR` | Cache directory | Optional |
 | `WEATHER_CACHE_SECONDS` | Cache TTL in seconds, default `0` | Optional |
+| `WEATHER_LOG_PATH` | JSONL call log path | Optional |
 
 Cache files are keyed by coordinates plus weather request shape (`hourlysteps`,
 `dailysteps`, and alert flag), so different forecast lengths do not reuse the
 wrong cached response.
-| `WEATHER_LOG_PATH` | JSONL call log path | Optional |
 
 Location priority: explicit address or coordinates win; without explicit input, `WEATHER_LNG/WEATHER_LAT` are used first, then `WEATHER_ADDRESS`.
 
@@ -96,6 +96,16 @@ Example:
 python3 ${SKILL_DIR}/scripts/weather_data.py --format bundle
 ```
 
+Bundle output shape:
+
+```json
+{
+  "schema_version": "6.4.0",
+  "json": {"location": "深圳市龙华区民治街道"},
+  "brief": {"keywords": ["明早备伞"]}
+}
+```
+
 ## Generate a full Markdown report
 
 Full reports are not hard-coded by the script. They are rendered by an AI agent according to the “Full Weather Report” skeleton and filling rules in `SKILL.md`.
@@ -134,6 +144,32 @@ python3 ${SKILL_DIR}/scripts/weather_data.py --mock rain --format bundle
 - **Workflow / Cron**: Inject environment variables in the runtime and call `weather_data.py --format bundle` for full reports or `--format short` for compact messages.
 - **IM bots**: Send `--format short` output directly for compact messages; for rich messages, let an AI agent render Markdown first.
 - **MCP / tool wrappers**: Register commands from the entrypoints in `manifest.json`.
+
+## Error format
+
+Failed CLI calls return structured JSON and exit with a non-zero status:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "missing_env",
+    "message": "缺少必填环境变量: CAIYUN_TOKEN",
+    "hint": "请通过调用方所在的 AI 工具或 shell 注入相应环境变量后重试。"
+  }
+}
+```
+
+Automation should check for the top-level `error` field and stop instead of
+fabricating weather.
+
+## GitHub Topics
+
+Suggested repository topics:
+
+```text
+weather caiyun-weather weather-api amap geocoding markdown cron ai-agent automation chinese zh-cn
+```
 
 ## Known limitations
 

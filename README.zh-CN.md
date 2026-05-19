@@ -9,7 +9,7 @@
 - **天气查询**：支持按地址或经纬度查询实时天气、今日概况、未来小时级和日级预报。
 - **地址解析**：支持结构化地址转经纬度，也支持经纬度逆地理编码。
 - **决策字段**：提供降雨、雨具、风、紫外线、空气质量、湿度、能见度、生活指数等预分级结果。
-- **完整播报**：输出 `brief` 决策 JSON，由 AI 按 `SKILL.md` 骨架生成完整 Markdown 天气播报。
+- **完整播报**：输出同源 `bundle` 数据（`json` + `brief`），由 AI 按 `SKILL.md` 骨架生成完整 Markdown 天气播报。
 - **离线演示**：内置 `sunny`、`rain`、`alert` mock 场景，便于演示、调试和 CI。
 - **安全边界**：脚本不会读取 `.env` 文件，不会输出 token 原值；环境变量由调用方注入。
 
@@ -37,9 +37,9 @@
 | `WEATHER_OUTPUT_DIR` | `--save` 默认输出目录 | 可选 |
 | `WEATHER_CACHE_DIR` | 缓存目录 | 可选 |
 | `WEATHER_CACHE_SECONDS` | 缓存秒数，默认 `0` | 可选 |
+| `WEATHER_LOG_PATH` | JSONL 调用日志路径 | 可选 |
 
 缓存会按经纬度以及请求形态（`hourlysteps`、`dailysteps`、alert 标记）生成 key，避免不同预报天数复用错误缓存。
-| `WEATHER_LOG_PATH` | JSONL 调用日志路径 | 可选 |
 
 定位优先级：显式地址或经纬度优先；未传地点时先看 `WEATHER_LNG/WEATHER_LAT`，再看 `WEATHER_ADDRESS`。
 
@@ -94,6 +94,16 @@ python3 ${SKILL_DIR}/scripts/geocode.py regeo --lng 120.155100 --lat 30.274100 -
 python3 ${SKILL_DIR}/scripts/weather_data.py --format bundle
 ```
 
+Bundle 输出形态：
+
+```json
+{
+  "schema_version": "6.4.0",
+  "json": {"location": "深圳市龙华区民治街道"},
+  "brief": {"keywords": ["明早备伞"]}
+}
+```
+
 ## 生成完整 Markdown 播报
 
 完整播报不由脚本硬编码，而是由 AI 根据 `SKILL.md` 中的「完整天气播报（骨架 + 填充规则）」渲染。
@@ -132,6 +142,31 @@ python3 ${SKILL_DIR}/scripts/weather_data.py --mock rain --format bundle
 - **Workflow / Cron**：由运行环境注入环境变量，完整播报调用 `weather_data.py --format bundle`，短消息调用 `--format short`。
 - **IM Bot**：短消息可直接发送 `--format short` 输出；富文本播报建议由 AI 渲染 Markdown 后发送。
 - **MCP / 工具封装**：可使用 `manifest.json` 中的 entrypoints 注册命令。
+
+## 错误格式
+
+CLI 失败时返回结构化 JSON，并以非 0 状态退出：
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "missing_env",
+    "message": "缺少必填环境变量: CAIYUN_TOKEN",
+    "hint": "请通过调用方所在的 AI 工具或 shell 注入相应环境变量后重试。"
+  }
+}
+```
+
+自动化调用方应检查顶层 `error` 字段；一旦存在就停止生成，不要编造天气。
+
+## GitHub Topics
+
+建议仓库 Topics：
+
+```text
+weather caiyun-weather weather-api amap geocoding markdown cron ai-agent automation chinese zh-cn
+```
 
 ## 已知限制
 

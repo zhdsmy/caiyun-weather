@@ -1,8 +1,31 @@
 {
   "name": "caiyun-weather",
   "version": "6.4.0",
-  "description": "通用天气查询 Skill：脚本只提供结构化天气数据与决策字段（JSON / brief / short，含日出日落、逐分钟降雨、生活指数、能见度分级），完整天气播报由 AI 根据 SKILL.md 的骨架渲染；--save 通过 stdin 接收 AI 写好的 Markdown 落盘。",
+  "description": "通用天气查询 Skill：脚本提供同源 bundle、完整 JSON、brief 决策字段与 short 中文摘要，含日出日落、逐分钟降雨、生活指数、能见度分级；完整天气播报由 AI 根据 SKILL.md 的骨架渲染。",
   "language": "zh-CN",
+  "keywords": [
+    "caiyun",
+    "weather",
+    "weather-api",
+    "amap",
+    "geocoding",
+    "markdown-report",
+    "cron",
+    "ai-skill",
+    "zh-CN"
+  ],
+  "topics": [
+    "weather",
+    "caiyun-weather",
+    "weather-api",
+    "amap",
+    "geocoding",
+    "markdown",
+    "cron",
+    "ai-agent",
+    "automation",
+    "chinese"
+  ],
   "runtime": {
     "python_min": "3.10",
     "dependencies": []

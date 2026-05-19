@@ -135,6 +135,20 @@ def test_mock_short_contract() -> None:
     assert "出门建议" in output
 
 
+def test_error_contract() -> None:
+    result = subprocess.run(
+        [sys.executable, str(SCRIPTS / "weather_data.py"), "--mock", "rain", "--days", "0"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+    )
+    assert result.returncode != 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "invalid_days"
+    assert "预报天数" in payload["error"]["message"]
+
+
 def test_mock_daily_astro_has_one_entry_per_day() -> None:
     sys.path.insert(0, str(SCRIPTS))
     import weather_data  # noqa: PLC0415
@@ -167,6 +181,7 @@ def main() -> None:
         test_mock_brief_contract,
         test_mock_bundle_contract,
         test_mock_short_contract,
+        test_error_contract,
         test_mock_daily_astro_has_one_entry_per_day,
     ]
     for test in tests:

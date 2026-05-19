@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "caiyun-weather/schemas/error.json",
+  "title": "Caiyun Weather Error",
+  "description": "统一错误输出。所有 CLI 失败都会保留顶层 error 字段，调用方可通过 error.code 做自动化处理。",
+  "type": "object",
+  "required": ["ok", "error"],
+  "properties": {
+    "ok": {"const": false},
+    "error": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "机器可读错误码，如 missing_env、missing_location、invalid_location、network_error。"
+        },
+        "message": {
+          "type": "string",
+          "description": "人类可读错误消息。"
+        },
+        "hint": {
+          "type": "string",
+          "description": "可选恢复建议。"
+        },
+        "details": {
+          "type": "object",
+          "description": "可选结构化上下文。"
+        }
+      }
+    }
+  }
+}
