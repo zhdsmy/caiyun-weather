@@ -20,7 +20,7 @@
         {"name": "--location", "required": false},
         {"name": "--tz", "required": false},
         {"name": "--days", "required": false, "description": "日级预报天数（1–15），默认 7"},
-        {"name": "--format", "required": false, "choices": ["json", "brief", "short"], "default": "json"},
+        {"name": "--format", "required": false, "choices": ["json", "brief", "bundle", "short"], "default": "json"},
         {"name": "--save", "required": false},
         {"name": "--mock", "required": false, "choices": ["sunny", "rain", "alert"]},
         {"name": "--cache-seconds", "required": false},
@@ -33,6 +33,12 @@
       "summary": "返回结构化决策数据（risks/rain/windows/keywords 等），供 LLM 按 SKILL.md 骨架渲染完整播报；也可作为非中文/轻量卡片场景的数据源。",
       "command": ["python3", "scripts/weather_data.py", "--format", "brief"],
       "schema": "schemas/brief.json"
+    },
+    {
+      "id": "bundle",
+      "summary": "一次查询返回同源 json 完整事实层与 brief 决策层，适合 Cron/完整播报，避免重复请求造成数据不一致。",
+      "command": ["python3", "scripts/weather_data.py", "--format", "bundle"],
+      "schema": "schemas/bundle.json"
     },
     {
       "id": "short",

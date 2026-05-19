@@ -37,6 +37,10 @@
 | `WEATHER_OUTPUT_DIR` | Default output directory for `--save` | Optional |
 | `WEATHER_CACHE_DIR` | Cache directory | Optional |
 | `WEATHER_CACHE_SECONDS` | Cache TTL in seconds, default `0` | Optional |
+
+Cache files are keyed by coordinates plus weather request shape (`hourlysteps`,
+`dailysteps`, and alert flag), so different forecast lengths do not reuse the
+wrong cached response.
 | `WEATHER_LOG_PATH` | JSONL call log path | Optional |
 
 Location priority: explicit address or coordinates win; without explicit input, `WEATHER_LNG/WEATHER_LAT` are used first, then `WEATHER_ADDRESS`.
@@ -83,12 +87,13 @@ python3 ${SKILL_DIR}/scripts/geocode.py regeo --lng 120.155100 --lat 30.274100 -
 |---|---|---|
 | `json` | Full structured weather data | Downstream parsing, AI-composed answers |
 | `brief` | Decision fields for risks, rain, umbrella, and life suggestions | Full Markdown reports, compact cards |
+| `bundle` | Same-request `{json, brief}` output: `json` is the normalized fact layer, `brief` is the derived decision layer | Full reports, Cron, workflow integrations |
 | `short` | A direct 3–6 line Chinese answer | Chat replies, IM pushes |
 
 Example:
 
 ```bash
-python3 ${SKILL_DIR}/scripts/weather_data.py --format brief
+python3 ${SKILL_DIR}/scripts/weather_data.py --format bundle
 ```
 
 ## Generate a full Markdown report
@@ -97,13 +102,13 @@ Full reports are not hard-coded by the script. They are rendered by an AI agent 
 
 Recommended flow:
 
-1. Run `weather_data.py --format brief` to get structured decision data.
-2. If hourly or 7-day tables need more detail, run `weather_data.py --format json` as well.
+1. Run `weather_data.py --format bundle` once to get same-request `json` and `brief`.
+2. Use `bundle.brief` for decisions and `bundle.json` for tables and detailed facts.
 3. Let the AI agent render Markdown according to the report skeleton in `SKILL.md`.
 4. If persistence is needed, pass the final Markdown to `--save` through stdin.
 
 ```bash
-python3 ${SKILL_DIR}/scripts/weather_data.py --address "杭州市西湖区" --format brief
+python3 ${SKILL_DIR}/scripts/weather_data.py --address "杭州市西湖区" --format bundle
 ```
 
 Save the AI-rendered Markdown:
@@ -120,12 +125,13 @@ Note: `--save` only saves Markdown received from stdin. It does not fetch weathe
 python3 ${SKILL_DIR}/scripts/weather_data.py --mock sunny --format short
 python3 ${SKILL_DIR}/scripts/weather_data.py --mock rain --format brief
 python3 ${SKILL_DIR}/scripts/weather_data.py --mock alert --format json
+python3 ${SKILL_DIR}/scripts/weather_data.py --mock rain --format bundle
 ```
 
 ## Integration
 
 - **AI Skill**: Load this directory and follow the execution strategy in `SKILL.md`.
-- **Workflow / Cron**: Inject environment variables in the runtime and call `weather_data.py --format brief` or `--format short`.
+- **Workflow / Cron**: Inject environment variables in the runtime and call `weather_data.py --format bundle` for full reports or `--format short` for compact messages.
 - **IM bots**: Send `--format short` output directly for compact messages; for rich messages, let an AI agent render Markdown first.
 - **MCP / tool wrappers**: Register commands from the entrypoints in `manifest.json`.
 

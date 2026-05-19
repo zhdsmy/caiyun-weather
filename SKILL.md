@@ -187,12 +187,13 @@ echo "$report" | python3 ${SKILL_DIR}/scripts/weather_data.py --address "杭州�
 
 ### 输出形式 `--format`
 
-`weather_data.py` 支持 3 种输出：
+`weather_data.py` 支持 4 种输出：
 
 | 值 | 内容 | 适合场景 |
 |---|---|---|
 | `json`（默认） | 完整数据 JSON，包含 `provider/units/timezone/realtime/today/hourly/days/output_dir/cache_used/save` 等字段 | LLM 自己拼回答；自动化下游解析 |
 | `brief` | 结构化决策 JSON：headline、keywords、temp、wind、uv、aqi、rain（已按严重度排序的 windows）、umbrella、alerts、**risks（统一风险数组）** | **渲染完整天气播报的主要数据源**；移动端卡片；轻量摘要 |
+| `bundle` | 同一次查询派生出的 `{json, brief}`，`json` 是完整事实层，`brief` 是从它派生的决策层 | 完整播报、Cron、Workflow；避免重复请求导致数据不一致 |
 | `short` | 3–6 行中文直接回答 | 即时聊天回复；Telegram/IM 推送 |
 
 ### 离线 / 演示模式 `--mock`
@@ -200,13 +201,14 @@ echo "$report" | python3 ${SKILL_DIR}/scripts/weather_data.py --address "杭州�
 ```bash
 python3 ${SKILL_DIR}/scripts/weather_data.py --mock sunny --format short
 python3 ${SKILL_DIR}/scripts/weather_data.py --mock alert --format brief
+python3 ${SKILL_DIR}/scripts/weather_data.py --mock rain --format bundle
 ```
 
 不调用任何外部 API，按当前时区动态生成内置示例（`sunny / rain / alert`），供 CI、Demo、单元测试使用。mock 会生成未来 24 小时关键时段和 7 天趋势，避免演示报告出现旧日期或重复时段。
 
 ### 缓存与日志
 
-- 缓存：`WEATHER_CACHE_SECONDS=600` 或 `--cache-seconds 600`，按经纬度缓存彩云原始响应。`--no-cache` 强制刷新。缓存目录默认 `~/.cache/caiyun-weather`，可用 `WEATHER_CACHE_DIR` 自定义。
+- 缓存：`WEATHER_CACHE_SECONDS=600` 或 `--cache-seconds 600`，按经纬度 + hourlysteps + dailysteps + alert 参数缓存彩云原始响应。`--no-cache` 强制刷新。缓存目录默认 `~/.cache/caiyun-weather`，可用 `WEATHER_CACHE_DIR` 自定义。
 - 日志：未配置 `WEATHER_LOG_PATH` 时不写日志；配置后追加 JSONL，每条记录 `action/format/location/lng/lat/cache_used/mock/save_path/ts`。
 
 ## 跨 AI 工具集成 Quick Start
@@ -215,11 +217,11 @@ python3 ${SKILL_DIR}/scripts/weather_data.py --mock alert --format brief
 
 ### 1. 通用 Skill 触发
 
-支持 `@skill:caiyun-weather` 这类入口的 AI 工具直接触发；生成完整天气播报的标准流程是：**先拿 `--format brief`→LLM 按骨架渲染 Markdown→需要落盘时把 Markdown 通过管道传给 `--save`**。
+支持 `@skill:caiyun-weather` 这类入口的 AI 工具直接触发；生成完整天气播报的标准流程是：**先拿 `--format bundle`→使用 `bundle.brief` 做判断、`bundle.json` 填表→LLM 按骨架渲染 Markdown→需要落盘时把 Markdown 通过管道传给 `--save`**。
 
 ```bash
-# 1）拿结构化决策数据
-python3 ${SKILL_DIR}/scripts/weather_data.py --address "杭州市西湖区" --format brief
+# 1）拿同源事实层 + 决策层
+python3 ${SKILL_DIR}/scripts/weather_data.py --address "杭州市西湖区" --format bundle
 # 2）LLM 自行渲染完整播报后，需要落盘时：
 echo "$rendered_md" | python3 ${SKILL_DIR}/scripts/weather_data.py --address "杭州市西湖区" --save
 ```
@@ -230,7 +232,7 @@ echo "$rendered_md" | python3 ${SKILL_DIR}/scripts/weather_data.py --address "�
 
 ```bash
 python3 ${SKILL_DIR}/scripts/weather_data.py --check
-python3 ${SKILL_DIR}/scripts/weather_data.py --address "{{address}}" --format brief
+python3 ${SKILL_DIR}/scripts/weather_data.py --address "{{address}}" --format bundle
 python3 ${SKILL_DIR}/scripts/geocode.py geo --address "{{address}}"
 ```
 
@@ -517,7 +519,7 @@ brief 里进一步聚合为 `rain_now`（供 LLM 直接读）：
 
 **渲染流程**：
 
-1. 调用 `weather_data.py --format brief` 拿到结构化决策数据；如需表格中的逐小时/7 天数据，再额外调一次 `--format json`，或直接调 `--format json` 后自己过一次 brief 式判断。
+1. 调用 `weather_data.py --format bundle` 拿到同源的 `json` 完整事实层与 `brief` 决策层；完整播报不要分别请求 `brief` 和 `json`。
 2. 按下方「播报骨架」渲染 Markdown；**骨架必须遵守**（章节顺序、emoji 标题、表格列结构、分隔线）；**措辞/排版细节/场景化建议可自由发挥**。
 3. 需要落盘时，把渲染好的 Markdown 通过管道传给 `--save`：`echo "$md" | weather_data.py --save`。
 

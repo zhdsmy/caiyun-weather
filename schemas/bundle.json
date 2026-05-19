@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "caiyun-weather/schemas/bundle.json",
+  "title": "Caiyun Weather Bundle",
+  "description": "同一次综合 API 查询派生出的完整事实层 json 与决策摘要 brief。适合完整播报、Cron、工作流和需要避免重复请求的集成。",
+  "type": "object",
+  "required": ["schema_version", "json", "brief"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "bundle 输出契约版本。"
+    },
+    "json": {
+      "$ref": "weather.json"
+    },
+    "brief": {
+      "$ref": "brief.json"
+    }
+  }
+}

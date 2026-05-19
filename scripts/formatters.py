@@ -782,6 +782,7 @@ def to_brief(data: dict[str, Any]) -> dict[str, Any]:
         }
 
     return {
+        "schema_version": data.get("schema_version"),
         "location": data.get("location"),
         "location_quality": geocode.get("quality") if isinstance(geocode, dict) else None,
         "headline": headline,

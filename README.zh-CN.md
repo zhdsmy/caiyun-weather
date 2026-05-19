@@ -37,6 +37,8 @@
 | `WEATHER_OUTPUT_DIR` | `--save` 默认输出目录 | 可选 |
 | `WEATHER_CACHE_DIR` | 缓存目录 | 可选 |
 | `WEATHER_CACHE_SECONDS` | 缓存秒数，默认 `0` | 可选 |
+
+缓存会按经纬度以及请求形态（`hourlysteps`、`dailysteps`、alert 标记）生成 key，避免不同预报天数复用错误缓存。
 | `WEATHER_LOG_PATH` | JSONL 调用日志路径 | 可选 |
 
 定位优先级：显式地址或经纬度优先；未传地点时先看 `WEATHER_LNG/WEATHER_LAT`，再看 `WEATHER_ADDRESS`。
@@ -83,12 +85,13 @@ python3 ${SKILL_DIR}/scripts/geocode.py regeo --lng 120.155100 --lat 30.274100 -
 |---|---|---|
 | `json` | 完整结构化天气数据 | 下游解析、AI 自行组织回答 |
 | `brief` | 风险、降雨、雨具、生活建议等决策字段 | 完整 Markdown 播报、移动端卡片 |
+| `bundle` | 同一次请求得到 `{json, brief}`：`json` 是规整事实层，`brief` 是派生决策层 | 完整播报、Cron、工作流集成 |
 | `short` | 3–6 行中文直接回答 | 即时聊天、IM 推送 |
 
 示例：
 
 ```bash
-python3 ${SKILL_DIR}/scripts/weather_data.py --format brief
+python3 ${SKILL_DIR}/scripts/weather_data.py --format bundle
 ```
 
 ## 生成完整 Markdown 播报
@@ -97,13 +100,13 @@ python3 ${SKILL_DIR}/scripts/weather_data.py --format brief
 
 推荐流程：
 
-1. 调用 `weather_data.py --format brief` 获取结构化决策数据。
-2. 如需填充逐小时或 7 天表格，可额外调用 `weather_data.py --format json`。
+1. 调用 `weather_data.py --format bundle` 一次获取同源的 `json` 和 `brief`。
+2. 使用 `bundle.brief` 做判断，使用 `bundle.json` 填充表格和详细事实。
 3. AI 按 `SKILL.md` 的播报骨架生成 Markdown。
 4. 需要落盘时，将最终 Markdown 通过 stdin 传给 `--save`。
 
 ```bash
-python3 ${SKILL_DIR}/scripts/weather_data.py --address "杭州市西湖区" --format brief
+python3 ${SKILL_DIR}/scripts/weather_data.py --address "杭州市西湖区" --format bundle
 ```
 
 保存 AI 渲染后的 Markdown：
@@ -120,12 +123,13 @@ echo "$rendered_md" | python3 ${SKILL_DIR}/scripts/weather_data.py --address "�
 python3 ${SKILL_DIR}/scripts/weather_data.py --mock sunny --format short
 python3 ${SKILL_DIR}/scripts/weather_data.py --mock rain --format brief
 python3 ${SKILL_DIR}/scripts/weather_data.py --mock alert --format json
+python3 ${SKILL_DIR}/scripts/weather_data.py --mock rain --format bundle
 ```
 
 ## 集成方式
 
 - **AI Skill**：加载本目录后，按 `SKILL.md` 的执行策略选择最小必要动作。
-- **Workflow / Cron**：由运行环境注入环境变量，调用 `weather_data.py --format brief` 或 `--format short`。
+- **Workflow / Cron**：由运行环境注入环境变量，完整播报调用 `weather_data.py --format bundle`，短消息调用 `--format short`。
 - **IM Bot**：短消息可直接发送 `--format short` 输出；富文本播报建议由 AI 渲染 Markdown 后发送。
 - **MCP / 工具封装**：可使用 `manifest.json` 中的 entrypoints 注册命令。
 

@@ -101,6 +101,7 @@
     }
   },
   "properties": {
+    "schema_version": {"type": ["string", "null"]},
     "location": {"type": "string"},
     "lng": {"type": "number"},
     "lat": {"type": "number"},

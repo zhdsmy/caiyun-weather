@@ -63,7 +63,9 @@ from _common import (
 
 import formatters  # noqa: E402 - 本地模块
 
-CAIYUN_ENDPOINT_TEMPLATE = "https://api.caiyunapp.com/v2.6/{token}/{lng},{lat}/weather?alert=true&hourlysteps=24&dailysteps={dailysteps}"
+SCHEMA_VERSION = "6.4.0"
+DEFAULT_HOURLY_STEPS = 24
+CAIYUN_ENDPOINT_TEMPLATE = "https://api.caiyunapp.com/v2.6/{token}/{lng},{lat}/weather?alert=true&hourlysteps={hourlysteps}&dailysteps={dailysteps}"
 AMAP_GEO_ENDPOINT = "https://restapi.amap.com/v3/geocode/geo"
 AMAP_REGEO_ENDPOINT = "https://restapi.amap.com/v3/geocode/regeo"
 
@@ -277,10 +279,15 @@ def _cache_dir() -> Path:
     return Path.home() / ".cache" / "caiyun-weather"
 
 
-def cache_lookup(lng: float, lat: float, ttl_seconds: int) -> dict[str, Any] | None:
+def cache_path(lng: float, lat: float, daily_steps: int, hourly_steps: int = DEFAULT_HOURLY_STEPS, alert: bool = True) -> Path:
+    alert_flag = "alert1" if alert else "alert0"
+    return _cache_dir() / f"caiyun_{lng:.6f}_{lat:.6f}_h{hourly_steps}_d{daily_steps}_{alert_flag}.json"
+
+
+def cache_lookup(lng: float, lat: float, ttl_seconds: int, daily_steps: int, hourly_steps: int = DEFAULT_HOURLY_STEPS) -> dict[str, Any] | None:
     if ttl_seconds <= 0:
         return None
-    path = _cache_dir() / f"caiyun_{lng:.6f}_{lat:.6f}.json"
+    path = cache_path(lng, lat, daily_steps, hourly_steps)
     try:
         if not path.exists():
             return None
@@ -293,8 +300,8 @@ def cache_lookup(lng: float, lat: float, ttl_seconds: int) -> dict[str, Any] | N
         return None
 
 
-def cache_store(lng: float, lat: float, data: dict[str, Any]) -> None:
-    path = _cache_dir() / f"caiyun_{lng:.6f}_{lat:.6f}.json"
+def cache_store(lng: float, lat: float, daily_steps: int, data: dict[str, Any], hourly_steps: int = DEFAULT_HOURLY_STEPS) -> None:
+    path = cache_path(lng, lat, daily_steps, hourly_steps)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         import json
@@ -707,9 +714,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--format",
-        choices=["json", "brief", "short"],
+        choices=["json", "brief", "bundle", "short"],
         default="json",
-        help="输出形式：json（完整数据，默认）；brief（结构化决策数据，供 LLM 生成完整播报）；short（3–6 行中文直接回答）。",
+        help="输出形式：json（完整数据，默认）；brief（结构化决策数据）；bundle（同源 json+brief）；short（3–6 行中文直接回答）。",
     )
     parser.add_argument(
         "--mock",
@@ -813,7 +820,7 @@ def run_check() -> None:
     }
 
     if token:
-        test_url = CAIYUN_ENDPOINT_TEMPLATE.format(token=token, lng=116.4075, lat=39.9040, dailysteps=DEFAULT_DAILY_STEPS)
+        test_url = CAIYUN_ENDPOINT_TEMPLATE.format(token=token, lng=116.4075, lat=39.9040, hourlysteps=DEFAULT_HOURLY_STEPS, dailysteps=DEFAULT_DAILY_STEPS)
         try:
             data = request_json(test_url, service="彩云天气自检", raise_errors=True)
             status = data.get("status")
@@ -893,7 +900,8 @@ def main() -> None:
         lat = resolved["lat"]
 
         ttl = _cache_seconds_from_args(args)
-        cached = cache_lookup(lng, lat, ttl)
+        daily_steps = int(resolved.get("daily_steps", DEFAULT_DAILY_STEPS))
+        cached = cache_lookup(lng, lat, ttl, daily_steps)
         if cached is not None:
             data = cached
             cache_used = True
@@ -902,14 +910,15 @@ def main() -> None:
                 token=resolved["token"],
                 lng=lng,
                 lat=lat,
-                dailysteps=resolved.get("daily_steps", DEFAULT_DAILY_STEPS),
+                hourlysteps=DEFAULT_HOURLY_STEPS,
+                dailysteps=daily_steps,
             )
             data = request_json(url, service="彩云天气")
             if data.get("status") != "ok":
                 emit({"error": f"彩云 API status: {data.get('status')}", "api_error": data.get("error")}, exit_code=1)
             cache_used = False
             if ttl > 0:
-                cache_store(lng, lat, data)
+                cache_store(lng, lat, daily_steps, data)
 
     res = data.get("result", {})
     rt = res.get("realtime", {})
@@ -1226,6 +1235,7 @@ def main() -> None:
     minutely = summarize_minutely(res.get("minutely"))
 
     out = {
+        "schema_version": SCHEMA_VERSION,
         "location": resolved["location"],
         "lng": round(lng, 6),
         "lat": round(lat, 6),
@@ -1278,6 +1288,12 @@ def main() -> None:
 
     if args.format == "brief":
         emit(formatters.to_brief(out))
+    elif args.format == "bundle":
+        emit({
+            "schema_version": SCHEMA_VERSION,
+            "json": out,
+            "brief": formatters.to_brief(out),
+        })
     elif args.format == "short":
         sys.stdout.write(formatters.to_short(out) + "\n")
     else:

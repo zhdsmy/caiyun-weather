@@ -55,6 +55,7 @@ def test_weather_schema_tracks_current_output_fields() -> None:
 
     for key in ("keypoint_hourly", "minutely"):
         assert key in props
+    assert "schema_version" in props
     for key in (
         "precip_nearest",
         "visibility_level",
@@ -80,6 +81,7 @@ def test_weather_schema_tracks_current_output_fields() -> None:
 def test_mock_weather_json_contract() -> None:
     for scenario in ("sunny", "rain", "alert"):
         data = load_cli_json("--mock", scenario, "--format", "json")
+        assert data["schema_version"] == "6.4.0"
         assert data["mock"] == scenario
         assert data["provider"]["weather"]["id"] == "caiyun"
         assert data["keypoint_hourly"]
@@ -96,6 +98,7 @@ def test_mock_weather_json_contract() -> None:
 def test_mock_brief_contract() -> None:
     for scenario in ("sunny", "rain", "alert"):
         data = load_cli_json("--mock", scenario, "--format", "brief")
+        assert data["schema_version"] == "6.4.0"
         assert data["location"] == "示例地点"
         assert data["keywords"]
         assert "rain_now" in data
@@ -112,6 +115,18 @@ def test_mock_brief_contract() -> None:
     alert = load_cli_json("--mock", "alert", "--format", "brief")
     assert alert["alerts"][0]["code"] == "0503"
     assert alert["alerts"][0]["level"] == "03"
+
+
+def test_mock_bundle_contract() -> None:
+    data = load_cli_json("--mock", "rain", "--format", "bundle")
+    assert data["schema_version"] == "6.4.0"
+    assert data["json"]["schema_version"] == "6.4.0"
+    assert data["brief"]["schema_version"] == "6.4.0"
+    assert data["json"]["mock"] == "rain"
+    assert data["brief"]["location"] == data["json"]["location"]
+    assert data["brief"]["rain"]["peak_window"] == data["brief"]["rain"]["windows"][0]
+    assert data["brief"]["rain"]["first_window"] == data["brief"]["rain"]["windows_chronological"][0]
+    assert data["brief"]["today_split"]["full_day_precip_max"] == data["json"]["today"]["precip_max"]
 
 
 def test_mock_short_contract() -> None:
@@ -150,6 +165,7 @@ def main() -> None:
         test_weather_schema_tracks_current_output_fields,
         test_mock_weather_json_contract,
         test_mock_brief_contract,
+        test_mock_bundle_contract,
         test_mock_short_contract,
         test_mock_daily_astro_has_one_entry_per_day,
     ]

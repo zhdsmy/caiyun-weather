@@ -6,6 +6,7 @@
   "type": "object",
   "required": ["location", "headline", "one_liner", "keywords", "temp", "sky", "wind", "rain", "umbrella", "risks"],
   "properties": {
+    "schema_version": {"type": ["string", "null"]},
     "location": {"type": ["string", "null"]},
     "location_quality": {"type": ["string", "null"], "enum": ["high", "medium", "low", "unknown", null]},
     "headline": {"type": "string"},
