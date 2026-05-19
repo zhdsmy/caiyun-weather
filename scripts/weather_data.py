@@ -385,7 +385,7 @@ MOCK_PROFILES: dict[str, dict[str, Any]] = {
         "hourly_description": "暴雨，今天夜间00点钟后雨势减小，转中雨，明早转阴",
         "alert": {
             "content": [{
-                "level": "03",
+                "code": "0503",
                 "title": "杭州市气象局发布暴雨橙色预警",
                 "description": "预计未来 6 小时内本市降雨量将达 50 毫米以上。",
             }]
@@ -531,11 +531,6 @@ def build_mock_weather_response(scenario: str, now: datetime, daily_steps: int =
             "sunrise": {"time": astro_profile["sunrise"]},
             "sunset": {"time": astro_profile["sunset"]},
         })
-        daily_astro.append({
-            "date": (now + timedelta(days=offset)).strftime("%Y-%m-%d"),
-            "sunrise": {"time": astro_profile["sunrise"]},
-            "sunset": {"time": astro_profile["sunset"]},
-        })
 
     # 按场景拼 minutely 原始结构，让下游 summarize_minutely 能正常分析。
     # precipitation_2h 长度 120，满足其彩云可观察到的分布形态。
@@ -656,6 +651,8 @@ def reverse_geocode(lng: float, lat: float, key: str) -> dict[str, Any]:
     normalize_amap(data)
     regeocode = data.get("regeocode", {})
     component = regeocode.get("addressComponent", {}) if isinstance(regeocode, dict) else {}
+    street_number = component.get("streetNumber", {}) if isinstance(component, dict) else {}
+    quality = "high" if isinstance(street_number, dict) and street_number.get("number") else "medium"
     return {
         "source": "amap_regeo",
         "formatted_address": regeocode.get("formatted_address"),
@@ -664,6 +661,9 @@ def reverse_geocode(lng: float, lat: float, key: str) -> dict[str, Any]:
         "district": pick_first_string(component.get("district")),
         "township": pick_first_string(component.get("township")),
         "adcode": component.get("adcode"),
+        "street": street_number.get("street") if isinstance(street_number, dict) else None,
+        "number": street_number.get("number") if isinstance(street_number, dict) else None,
+        "quality": quality,
         "lng": round(lng, 6),
         "lat": round(lat, 6),
         "location": location,
@@ -765,7 +765,7 @@ def resolve_inputs(args: argparse.Namespace) -> dict[str, Any]:
     if lng_raw is not None and lat_raw is not None:
         lng, lat = parse_lng_lat(lng_raw, lat_raw)
         key = amap_key()
-        if not location and key:
+        if key:
             geocode_meta = reverse_geocode(lng, lat, key)
     elif address:
         key = amap_key()
@@ -919,8 +919,13 @@ def main() -> None:
     # ═══ alerts ═══
     alerts = []
     for alert in res.get("alert", {}).get("content", []):
+        code = safe(alert, "code")
+        level = safe(alert, "level")
+        if not level and isinstance(code, str) and len(code) >= 2:
+            level = code[-2:]
         alerts.append({
-            "level": safe(alert, "level"),
+            "level": level,
+            "code": code,
             "title": safe(alert, "title"),
             "desc": safe(alert, "description"),
             "pub_date": (safe(alert, "pubDate") or "")[:16].replace("T", " "),
@@ -980,7 +985,7 @@ def main() -> None:
         "pressure_hpa": round(pressure / 100, 1) if isinstance(pressure, (int, float)) else None,
         "aqi": num(safe(rt, "air_quality", "aqi", "chn")),
         "pm25": num(safe(rt, "air_quality", "pm25")),
-        # 保留旧字段兼容下游，LLM 优先用 life_index 完整对象
+        # 保留旧字段兼容下游，LLM 优先用 life_index 可用集合
         "uv": safe(rt, "life_index", "ultraviolet", "index"),
         "uv_desc": safe(rt, "life_index", "ultraviolet", "desc"),
         "comfort": safe(rt, "life_index", "comfort", "desc"),

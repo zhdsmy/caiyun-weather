@@ -78,6 +78,8 @@
         "night_rain": {"type": "boolean"},
         "peak_precip": {"type": "number"},
         "peak_intensity": {"type": ["string", "null"]},
+        "first_window": {"anyOf": [{"$ref": "#/properties/rain/properties/windows/items"}, {"type": "null"}]},
+        "peak_window": {"anyOf": [{"$ref": "#/properties/rain/properties/windows/items"}, {"type": "null"}]},
         "windows": {
           "type": "array",
           "items": {
@@ -97,6 +99,11 @@
               "source": {"type": "string", "enum": ["slot", "abnormal"]}
             }
           }
+        },
+        "windows_chronological": {
+          "type": "array",
+          "description": "与 windows 内容相同，但按时间顺序排列，供自然语言播报先讲时间线。",
+          "items": {"$ref": "#/properties/rain/properties/windows/items"}
         }
       }
     },
@@ -116,6 +123,7 @@
         "properties": {
           "title": {"type": ["string", "null"]},
           "desc": {"type": ["string", "null"]},
+          "code": {"type": ["string", "null"]},
           "level": {"type": ["string", "null"]},
           "color": {"type": "string"},
           "emoji": {"type": "string"},
@@ -175,7 +183,7 @@
     },
     "today_split": {
       "type": "object",
-      "description": "今日白天（08-20）/ 夜间（20-32）分时段汇总，来自彩云 daily.skycon_08h_20h / skycon_20h_32h 与对应 precipitation 数组。用于「今晚会下雨吗/白天还下雨吗」。",
+      "description": "今日白天（08-20）/ 夜间（20-次日08）分时段汇总，来自彩云 daily.skycon_08h_20h / skycon_20h_32h 与对应 precipitation 数组。用于「今晚会下雨吗/白天还下雨吗」。",
       "properties": {
         "day": {
           "type": "object",
@@ -199,8 +207,12 @@
             "precip_avg": {"type": ["number", "null"]}
           }
         },
-        "precip_max": {"type": ["number", "null"], "description": "今日全天峰值雨强 mm/h"},
-        "precip_avg": {"type": ["number", "null"], "description": "今日全天平均雨强 mm/h"}
+        "precip_max": {"type": ["number", "null"], "description": "兼容字段：自然日全天峰值雨强 mm/h，等同 full_day_precip_max。"},
+        "precip_avg": {"type": ["number", "null"], "description": "兼容字段：自然日全天平均雨强 mm/h，等同 full_day_precip_avg。"},
+        "full_day_precip_max": {"type": ["number", "null"], "description": "自然日全天峰值雨强，来自 daily.precipitation[0].max。"},
+        "full_day_precip_avg": {"type": ["number", "null"], "description": "自然日全天平均雨强，来自 daily.precipitation[0].avg。"},
+        "day_night_peak_precip": {"type": ["number", "null"], "description": "08-20 与 20-次日08 两个分段中的最大峰值雨强。"},
+        "day_night_peak_period": {"type": ["string", "null"], "enum": ["day", "night", null]}
       }
     },
     "visibility": {
@@ -213,7 +225,7 @@
     },
     "life_index": {
       "type": "object",
-      "description": "彩云生活指数完整集合：ultraviolet/comfort/coldRisk/dressing/carWashing。LLM 据此回答「今天适合洗车么/会感冒么/穿什么」。",
+      "description": "彩云返回的可用生活指数集合，常见项包括 ultraviolet/comfort/coldRisk/dressing/carWashing；真实接口不保证每项都存在。",
       "additionalProperties": {
         "type": "object",
         "properties": {
@@ -223,6 +235,6 @@
       }
     },
     "keypoint": {"type": ["string", "null"]},
-    "keypoint_hourly": {"type": ["string", "null"], "description": "彩云 hourly.description：高密度中文描述，跨度比 forecast_keypoint 长、免费 token 也能拿到。minutely.available=false 时优先引用这一字段回答「还会下多久」「几点雨停」。"
+    "keypoint_hourly": {"type": ["string", "null"], "description": "彩云 hourly.description：高密度中文描述，跨度比 forecast_keypoint 长、免费 token 也能拿到。minutely.available=false 时优先引用这一字段回答「还会下多久」「几点雨停」。"}
   }
 }

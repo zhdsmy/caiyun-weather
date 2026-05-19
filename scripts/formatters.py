@@ -64,7 +64,7 @@ UMBRELLA_ACTIONS: dict[str, str] = {
 }
 
 # 风险类型枚举（用于 risks[] 的 kind 字段）
-RISK_KINDS = ("alert", "rain", "wind", "aqi", "uv", "humidity", "temperature")
+RISK_KINDS = ("alert", "rain", "wind", "aqi", "uv", "humidity", "temperature", "visibility")
 
 # 风险严重度枚举，顺序从低到高
 RISK_SEVERITIES = ("info", "low", "medium", "high", "critical")
@@ -207,8 +207,29 @@ def _rain_now(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def _today_split(data: dict[str, Any]) -> dict[str, Any]:
-    """今日白天/夜间分时段汇总。供 LLM 回答「今晚会下雨吗/白天还有雨吗」。"""
+    """今日白天/夜间分时段汇总。供 LLM 回答「今晚会下雨吗/白天还有雨吗」。
+
+    彩云 daily 里 precipitation 是自然日全天；precipitation_20h_32h 是今日 20:00 到
+    次日 08:00。两者不是同一时间窗口，不能直接互相覆盖。
+    """
     today = data.get("today") or {}
+    day_precip_max = today.get("precip_day_max")
+    night_precip_max = today.get("precip_night_max")
+    day_night_candidates: list[tuple[str, Any]] = [
+        ("day", day_precip_max),
+        ("night", night_precip_max),
+    ]
+    numeric_candidates: list[tuple[str, float]] = []
+    for period, value in day_night_candidates:
+        try:
+            if value is not None:
+                numeric_candidates.append((period, float(value)))
+        except (TypeError, ValueError):
+            continue
+    if numeric_candidates:
+        day_night_peak_period, day_night_peak_precip = max(numeric_candidates, key=lambda item: item[1])
+    else:
+        day_night_peak_period, day_night_peak_precip = None, None
     return {
         "day": {
             "skycon": today.get("skycon_day"),
@@ -226,6 +247,11 @@ def _today_split(data: dict[str, Any]) -> dict[str, Any]:
             "precip_max": today.get("precip_night_max"),
             "precip_avg": today.get("precip_night_avg"),
         },
+        "full_day_precip_max": today.get("precip_max"),
+        "full_day_precip_avg": today.get("precip_avg"),
+        "day_night_peak_precip": round(day_night_peak_precip, 2) if day_night_peak_precip is not None else None,
+        "day_night_peak_period": day_night_peak_period,
+        # Backward-compatible aliases. These are natural-day values, not max(day, night).
         "precip_max": today.get("precip_max"),
         "precip_avg": today.get("precip_avg"),
     }
@@ -378,6 +404,14 @@ def _umbrella(data: dict[str, Any]) -> dict[str, Any]:
 def _rain_summary(data: dict[str, Any]) -> dict[str, Any]:
     hourly = data.get("hourly") or {}
     windows = _rain_windows(data)
+    windows_chronological = sorted(
+        windows,
+        key=lambda w: (
+            99 if w.get("day_offset") is None else int(w.get("day_offset") or 0),
+            99 if w.get("hour") is None else int(w.get("hour") or 0),
+            w.get("datetime") or "",
+        ),
+    )
     peak_precip = max((float(w.get("precip") or 0) for w in windows), default=0.0)
     # peak_intensity 与 windows[0].intensity 对齐，避免「STORM_RAIN 6mm/h 被 _precip_intensity 归为中雨」的措辞分裂。
     peak_intensity = windows[0].get("intensity") if windows else None
@@ -388,7 +422,10 @@ def _rain_summary(data: dict[str, Any]) -> dict[str, Any]:
         "night_rain": bool(hourly.get("night_rain")),
         "peak_precip": round(peak_precip, 2) if peak_precip > 0 else 0,
         "peak_intensity": peak_intensity,
+        "first_window": windows_chronological[0] if windows_chronological else None,
+        "peak_window": windows[0] if windows else None,
         "windows": windows,
+        "windows_chronological": windows_chronological,
     }
 
 
@@ -401,6 +438,7 @@ def _alerts_brief(data: dict[str, Any]) -> list[dict[str, Any]]:
             "title": alert.get("title"),
             "desc": alert.get("desc"),
             "level": level,
+            "code": alert.get("code"),
             "color": color,
             "emoji": emoji,
             "pub_date": alert.get("pub_date"),
@@ -456,6 +494,7 @@ def _build_risks(
                 "title": alert.get("title"),
                 "desc": alert.get("desc"),
                 "level_code": alert.get("level"),
+                "raw_code": alert.get("code"),
                 "color": alert.get("color"),
                 "pub_date": alert.get("pub_date"),
             },

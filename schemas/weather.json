@@ -14,6 +14,34 @@
       },
       "required": ["id", "name"]
     },
+    "lifeIndexItem": {
+      "type": "object",
+      "properties": {
+        "desc": {"type": ["string", "null"]},
+        "index": {"type": ["integer", "number", "string", "null"]}
+      }
+    },
+    "minutely": {
+      "type": ["object", "null"],
+      "properties": {
+        "available": {"type": "boolean"},
+        "status": {"type": ["string", "null"]},
+        "description": {"type": ["string", "null"]},
+        "has_rain_in_2h": {"type": ["boolean", "null"]},
+        "starts_in_minutes": {"type": ["integer", "null"]},
+        "stops_in_minutes": {"type": ["integer", "null"]},
+        "peak_intensity": {"type": ["number", "null"]},
+        "peak_in_minutes": {"type": ["integer", "null"]}
+      }
+    },
+    "precipNearest": {
+      "type": ["object", "null"],
+      "properties": {
+        "status": {"type": ["string", "null"]},
+        "distance": {"type": ["number", "null"]},
+        "intensity": {"type": ["number", "null"]}
+      }
+    },
     "hourlySlot": {
       "type": "object",
       "properties": {
@@ -55,7 +83,9 @@
         "t_max": {"type": ["number", "null"]},
         "precip_prob": {"type": ["integer", "null"]},
         "aqi": {"type": ["number", "null"]},
-        "uv": {"type": ["number", "null"]}
+        "uv": {"type": ["number", "null"]},
+        "sunrise": {"type": ["string", "null"]},
+        "sunset": {"type": ["string", "null"]}
       },
       "required": ["date", "offset"]
     },
@@ -63,6 +93,7 @@
       "type": "object",
       "properties": {
         "level": {"type": ["string", "null"]},
+        "code": {"type": ["string", "null"]},
         "title": {"type": ["string", "null"]},
         "desc": {"type": ["string", "null"]},
         "pub_date": {"type": ["string", "null"]}
@@ -111,6 +142,7 @@
     "weekday": {"type": "string"},
     "generated": {"type": "string"},
     "keypoint": {"type": ["string", "null"]},
+    "keypoint_hourly": {"type": ["string", "null"]},
     "alerts": {"type": "array", "items": {"$ref": "#/$defs/alert"}},
     "realtime": {
       "type": "object",
@@ -123,14 +155,25 @@
         "wind_dir": {"type": ["number", "null"]},
         "wind_spd": {"type": ["number", "null"]},
         "precip": {"type": ["number", "null"]},
+        "precip_local_status": {"type": ["string", "null"]},
+        "precip_local_datasource": {"type": ["string", "null"]},
+        "precip_nearest": {"$ref": "#/$defs/precipNearest"},
         "visibility": {"type": ["number", "null"]},
+        "visibility_level": {"type": ["string", "null"], "enum": ["极差", "差", "一般", "良好", "极佳", null]},
         "pressure": {"type": ["number", "null"]},
         "pressure_hpa": {"type": ["number", "null"]},
         "aqi": {"type": ["number", "null"]},
         "pm25": {"type": ["number", "null"]},
         "uv": {"type": ["number", "string", "null"]},
         "uv_desc": {"type": ["string", "null"]},
-        "comfort": {"type": ["string", "null"]}
+        "comfort": {"type": ["string", "null"]},
+        "life_index": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/lifeIndexItem"}
+        },
+        "sunrise_today": {"type": ["string", "null"]},
+        "sunset_today": {"type": ["string", "null"]},
+        "is_daytime": {"type": ["boolean", "null"]}
       }
     },
     "today": {
@@ -139,10 +182,21 @@
         "t_min": {"type": ["number", "null"]},
         "t_max": {"type": ["number", "null"]},
         "skycon": {"type": ["string", "null"]},
+        "skycon_day": {"type": ["string", "null"]},
+        "skycon_night": {"type": ["string", "null"]},
         "aqi": {"type": ["number", "null"]},
-        "precip_prob": {"type": ["integer", "null"]}
+        "precip_prob": {"type": ["integer", "null"]},
+        "precip_max": {"type": ["number", "null"]},
+        "precip_avg": {"type": ["number", "null"]},
+        "precip_day_prob": {"type": ["integer", "null"]},
+        "precip_day_max": {"type": ["number", "null"]},
+        "precip_day_avg": {"type": ["number", "null"]},
+        "precip_night_prob": {"type": ["integer", "null"]},
+        "precip_night_max": {"type": ["number", "null"]},
+        "precip_night_avg": {"type": ["number", "null"]}
       }
     },
+    "minutely": {"$ref": "#/$defs/minutely"},
     "hourly": {
       "type": "object",
       "properties": {

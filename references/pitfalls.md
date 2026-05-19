@@ -36,8 +36,8 @@
 | 「现在在下雨吗 / 附近有雨带吗 / 雨会变大吗」 | rain_now | `is_raining` / `approaching` / `intensifying` / `nearest_distance_km` | ✅ | ✅ |
 | 「雨会下多久 / 几点雨停 / 下多久转成什么」 | keypoint_hourly | hourly.description 中文描述 | ✅ | ✅ |
 | 「再过几分钟开始下雨」（需分钟精度） | minutely | `available` / `starts_in_minutes` / `peak_intensity` | ✅ | ❌ |
-| 「今天白天/夜里会下多大雨」 | today_split | `day.precip_max` / `night.precip_max` | ✅ | ✅ |
-| 「今天起未来 24h 要不要带伞」 | rain.windows / today_day_rain | brief.rain.windows[0] / umbrella.code | ✅ | ✅ |
+| 「今天白天/夜里会下多大雨」 | today_split | `day.precip_max` / `night.precip_max` / `day_night_peak_precip` | ✅ | ✅ |
+| 「今天起未来 24h 要不要带伞」 | rain.windows / today_day_rain | brief.rain.peak_window / first_window / umbrella.code | ✅ | ✅ |
 
 **付费 token 检测**：`minutely.available == true` 只在付费 token 上出现。LLM 不要纠结「为什么今天 minutely 拿不到」——该字段与是否正在下雨无关。
 
@@ -49,7 +49,7 @@
 | 地址查天气 | `CAIYUN_TOKEN` + `AMAP_KEY` or `GAODE_KEY` |
 | 地址转经纬度 | `AMAP_KEY` or `GAODE_KEY` |
 | 经纬度转地址 | `AMAP_KEY` or `GAODE_KEY` |
-| 默认地点查询（经纬度模式） | `WEATHER_LNG` + `WEATHER_LAT`（可选 `WEATHER_LOCATION` 作展示名） |
+| 默认地点查询（经纬度模式） | `WEATHER_LNG` + `WEATHER_LAT`（可选 `WEATHER_LOCATION` 作展示名；有高德 Key 时仍会 regeo 补 geocode quality） |
 | 默认地点查询（地址模式） | `WEATHER_ADDRESS`（展示名由高德自动推导；`WEATHER_LOCATION` 可选覆盖） |
 | 默认城市兜底 | `WEATHER_DEFAULT_CITY` |
 | 输出目录自定义 | `WEATHER_OUTPUT_DIR` |
@@ -89,8 +89,23 @@ Do not print token values or any environment file contents. `--check` 已自动�
 - ✅ 今天日间雨：今天出门带伞。
 - ✅ 仅明晨雨：今天白天无明显降雨，今晚可不带伞，明早备伞。
 - ✅ 「今晚/白天会不会下雨」优先用 today_split.day/night，而不是全天 skycon。
-- ✅ 「今天雨多大」优先用 today.precip_max，today_split.day.precip_max（mm/h）。
+- ✅ 「今天自然日雨多大」优先用 today.precip_max / today_split.full_day_precip_max（mm/h）。
+- ✅ 「今晚到明早雨多大」用 today_split.night.precip_max 或 day_night_peak_precip。
+- ✅ `daily.precipitation_20h_32h` 是今日 20:00 到次日 08:00，不是自然日 20:00 到 24:00。
+- ✅ 播报时间线用 rain.first_window / windows_chronological；风险主提示用 rain.peak_window。
 - ❌ 明晨有雨时，不要笼统写「未来 24 小时无降雨」。
+
+### Daily API window semantics
+
+- `daily.precipitation[i]`：自然日全天。
+- `daily.precipitation_08h_20h[i]`：当天 08:00-20:00。
+- `daily.precipitation_20h_32h[i]`：当天 20:00 到次日 08:00，可能包含次日清晨降雨。
+- `forecast_keypoint`：短时关键点；`hourly.description`：未来 24 小时高密度中文描述。
+
+### Alerts
+
+- 彩云预警有些响应提供 `level`，有些需要从 `code` 末两位解析颜色等级。
+- 当前脚本使用 `level = alert.level or alert.code[-2:]`。
 
 ### Real-time rain (now / nearby / intensifying)
 

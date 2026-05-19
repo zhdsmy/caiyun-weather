@@ -1,7 +1,7 @@
 ---
 name: caiyun-weather
 description: "通用天气查询 Skill：脚本吐结构化天气 JSON 与决策字段（含「现在在下雨吗/雨在变大吗」主信号、今日白夜分时雨强、高密度小时描述、生活指数），完整播报由 LLM 按骨架渲染。另提供结构化地址 ↔ 经纬度互转。"
-version: 4.2.0
+version: 6.4.0
 agent_created: true
 ---
 
@@ -85,12 +85,12 @@ agent_created: true
 
 不同 AI 工具有自己的环境变量加载机制，遵循各自约定即可；脚本只检查变量是否到位，缺什么由 `--check` 直接报告。
 
-**职责区分**：`WEATHER_ADDRESS` 和 `WEATHER_LNG/LAT` 是**二选一的定位输入**，脚本用它们去查天气；`WEATHER_LOCATION` 只是**输出标题的展示名**。地址模式下脚本会自动把高德返回的 `formatted_address` 作为 location，通常不必再设 `WEATHER_LOCATION`；只有经纬度模式下、或想把「杭州市西湖区西湖风景名胜区」简写成「西湖」时，才单独设 `WEATHER_LOCATION`。
+**职责区分**：`WEATHER_ADDRESS` 和 `WEATHER_LNG/LAT` 是**二选一的定位输入**，脚本用它们去查天气；`WEATHER_LOCATION` 只是**输出标题的展示名**。地址模式下脚本会自动把高德返回的 `formatted_address` 作为 location，通常不必再设 `WEATHER_LOCATION`；经纬度模式下如有高德 Key，脚本仍会逆地理编码补齐 `geocode.quality`，但展示名可继续由 `WEATHER_LOCATION` 覆盖。
 
 定位规则：
 
 1. 用户给出明确地址 → 优先 `geo` 高德地理编码。
-2. 用户给出经纬度 → 直接查天气；若缺位置名且有高德 Key，会用 `regeo` 补齐。
+2. 用户给出经纬度 → 直接查天气；若有高德 Key，会用 `regeo` 补齐结构化地址与 `quality`（`WEATHER_LOCATION` 仅覆盖展示名）。
 3. 用户未给地点 → 按优先级使用环境变量：
    - 有 `WEATHER_LNG/WEATHER_LAT` → 走经纬度模式，`WEATHER_LOCATION` 作为展示名；
    - 否则有 `WEATHER_ADDRESS` → 走地址模式，展示名由高德 `formatted_address` 自动推导（`WEATHER_LOCATION` 可选覆盖）。
@@ -310,16 +310,16 @@ python3 ${SKILL_DIR}/scripts/weather_data.py \
   life_index: {
     ultraviolet: { desc, index },
     comfort:     { desc, index },
-    coldRisk:    { desc, index },  // 感冒指数
-    dressing:    { desc, index },  // 穿衣指数
-    carWashing:  { desc, index }   // 洗车指数
+    coldRisk:    { desc, index },  // 感冒指数，接口不保证总是返回
+    dressing:    { desc, index },  // 穿衣指数，接口不保证总是返回
+    carWashing:  { desc, index }   // 洗车指数，接口不保证总是返回
   }
 }
 ```
 
 优先使用 `humidity_pct`、`pressure_hpa`、`uv_desc`；老字段仅作备用，避免“把 0.78 当 78% 写成 78%”这种反复换算错误。
 
-回答「几点日出」「现在是白天吗」直接用 `sunrise_today` / `sunset_today` / `is_daytime`；回答「适合洗车/会感冒/穿什么」直接用 `life_index.{carWashing,coldRisk,dressing}.desc`。
+回答「几点日出」「现在是白天吗」直接用 `sunrise_today` / `sunset_today` / `is_daytime`；回答「适合洗车/会感冒/穿什么」直接用 `life_index.{carWashing,coldRisk,dressing}.desc`。真实接口可能只返回部分生活指数；缺项时不要自行推导成确定结论。
 
 ### today / days
 
@@ -328,8 +328,8 @@ python3 ${SKILL_DIR}/scripts/weather_data.py \
 `today` 除了 `t_min/t_max/skycon/aqi/precip_prob`，还额外提供：
 
 - `skycon_day` / `skycon_night`：今日白天 08–20 点 / 夜间 20–32 点 的 skycon，可能与全天 `skycon` 不同。「今晚会下雨吗/白天还下吗」优先读这两个字段。
-- `precip_max` / `precip_avg`：今日全天峰值雨强、平均雨强 mm/h。「今天会下多大雨」可用。
-- `precip_day_*` / `precip_night_*`：白天、夜间分时段雨强（prob/max/avg）。
+- `precip_max` / `precip_avg`：自然日全天峰值雨强、平均雨强 mm/h，来自 `daily.precipitation`。
+- `precip_day_*` / `precip_night_*`：白天 08–20、夜间 20–次日 08 的分时段雨强（prob/max/avg）。夜间段可包含次日清晨。
 
 `days` 默认 7 天，可用 `--days N` 或 `WEATHER_DAILY_STEPS` 调到 1–15 天；每项携带 `date / offset / skycon / t_min / t_max / precip_prob / aqi / uv / sunrise / sunset`。其中 `offset` 为从今日起的偏移（0/1/2/…），便于下游定位「今日/明日/后天」等标签。
 
@@ -590,17 +590,17 @@ brief 里进一步聚合为 `rain_now`（供 LLM 直接读）：
 - **用 brief.risks[] 作为「二、需要特别注意」的唯一来源**，保证风险不漏、不重复、排序与严重度一致。
 - **用 brief.keywords 作为「出门关键词」的主骨架**，可改写措辞但不应新增/删减角度。
 - **用 brief.umbrella.code 的枚举值判断雨具话术**（`carry_today` / `carry_tomorrow_morning` / `none`），不要直接照搬 text。
-- **用 brief.rain.windows[0]**（已按峰值雨量排好）作为主提示的时段和雨势。
+- **用 brief.rain.peak_window**（或 `windows[0]`，已按峰值雨量排好）作为主风险提示；用 `brief.rain.first_window` / `windows_chronological` 组织时间线。
 - **时间标签严格按 `day_offset` 写**：`0` →「今天 HH:00」；`1` 且 `hour<6` →「明晨 HH:00」；`1` 且 `hour≥6` →「明天 HH:00」。不写「今晚 03:00」指代明晨。
 - **逐小时用 `precip_prob_pct`（整数），日级用 `precip_prob`（整数）**，两者都是 0–100，直接加 `%`；不得把小数概率与百分比混用。
 - **须使用 brief 里的已分级枚举**（wind.level / uv.level / aqi.level / humidity.feel / visibility.level），不要自己重新按原始值判断。
 - **「逐分钟近期降雨」问题**（「还有几分钟下雨」/「雨会下多久」）优先级：`brief.minutely.available=true` 时使用 `brief.minutely`；否则退一步用 `brief.keypoint_hourly`（「16 点雨停」这种高密度描述）；都拿不到时告知用户「当前 token 不支持逐分钟预报」。不要用 `hourly.precipitation` 手动拼一个假装精确到分钟的答案。
 - **「现在在下雨吗/附近有雨带吗/雨会变大吗」使用 `brief.rain_now`**（`is_raining` / `approaching` / `intensifying` / `nearest_distance_km`），不要手动拼 `realtime.precip` 和 `realtime.precip_nearest`。
 - **「今晚会下雨吗/白天还下吗」使用 `brief.today_split`**（`day.skycon/precip_max` 与 `night.skycon/precip_max`），不要只看全天 `today.skycon`。
-- **「今天会下多大雨」使用 `today.precip_max` / `today_split.day.precip_max`**（mm/h），而不是只提概率。
+- **「今天自然日会下多大雨」使用 `today.precip_max` / `today_split.full_day_precip_max`**；**「今晚到明早雨多大」使用 `today_split.night.precip_max` 或 `day_night_peak_precip`**。不要把 `20h_32h` 当作自然日全天。
 - **「几点雨停/雨会转成什么」优先使用 `brief.keypoint_hourly`**（完整中文跨度描述）。
 - **「几点日出/日落」「现在是白天吗」直接用 `brief.daylight` 或 `realtime.sunrise_today/sunset_today/is_daytime`**，不要估算。
-- **「适合洗车吗/会感冒吗/穿什么」用 `brief.life_index`**（`carWashing` / `coldRisk` / `dressing` / `ultraviolet` / `comfort`），直接引用 `desc`，不要从原始气温/湿度再推导。
+- **「适合洗车吗/会感冒吗/穿什么」用 `brief.life_index`**（`carWashing` / `coldRisk` / `dressing` / `ultraviolet` / `comfort`），直接引用已返回项的 `desc`；缺项时说明当前接口未返回，不要从原始气温/湿度再推导。
 - **雾天/能见度查询**：`brief.visibility` 或 `realtime.visibility_level`；<1km 主动提醒「驾驶注意」。
 - **台风查询**：本 Skill **不提供台风路径预报**。只当 `alerts[]` 里有 `台风` 预警标题时，可以汇报「已有台风 XXX 预警」；其余情况全部走「已知不支持」分支直接告知用户，不要用 `keypoint` 和零星词拼一个看似自信的答案。
 - **keypoint 只作短时占位引用**，与长时结论矛盾时优先舍弃 keypoint。
