@@ -2,14 +2,14 @@
 
 [中文版本](README.zh-CN.md) | [English Version](README.md)
 
-`caiyun-weather` is a weather-query Skill designed primarily for Chinese-language users. It provides structured weather data, geocoding, risk pre-classification, and lightweight answer data through CLI scripts. Full Markdown weather reports are rendered by an AI agent according to the report skeleton in `SKILL.md`.
+`caiyun-weather` is a weather-query Skill designed primarily for Chinese-language users. It provides structured weather data, geocoding, risk pre-classification, and lightweight answer data through CLI scripts. Full Markdown weather reports are rendered by an AI agent according to the report skeleton in `references/reporting.md`.
 
 ## Features
 
 - **Weather queries**: Query realtime weather, today's summary, hourly forecasts, and daily forecasts by address or coordinates.
 - **Geocoding**: Convert structured addresses to coordinates, and reverse coordinates back to address information.
 - **Decision fields**: Pre-classified rain, umbrella, wind, UV, AQI, humidity, visibility, and life-index signals.
-- **Full reports**: Output same-request `bundle` data (`json` + `brief`) for an AI agent to render complete Markdown weather reports using `SKILL.md`.
+- **Full reports**: Output same-request `bundle` data (`json` + `brief`) for an AI agent to render complete Markdown weather reports using `references/reporting.md`.
 - **Offline demos**: Built-in `sunny`, `rain`, and `alert` mock scenarios for demos, debugging, and CI.
 - **Safety boundary**: Scripts do not read `.env` files and do not print raw tokens; environment variables are injected by the caller.
 
@@ -108,7 +108,7 @@ Bundle output shape:
 
 ## Generate a full Markdown report
 
-Full reports are not hard-coded by the script. They are rendered by an AI agent according to the “Full Weather Report” skeleton and filling rules in `SKILL.md`.
+Full reports are not hard-coded by the script. They are rendered by an AI agent according to the “Full Weather Report” skeleton and filling rules in `references/reporting.md`.
 
 Recommended flow:
 
@@ -140,7 +140,7 @@ python3 ${SKILL_DIR}/scripts/weather_data.py --mock rain --format bundle
 
 ## Integration
 
-- **AI Skill**: Load this directory and follow the execution strategy in `SKILL.md`.
+- **AI Skill**: Load this directory and follow the execution strategy in `SKILL.md`; use `references/reporting.md` for full reports.
 - **Workflow / Cron**: Inject environment variables in the runtime and call `weather_data.py --format bundle` for full reports or `--format short` for compact messages.
 - **IM bots**: Send `--format short` output directly for compact messages; for rich messages, let an AI agent render Markdown first.
 - **MCP / tool wrappers**: Register commands from the entrypoints in `manifest.json`.

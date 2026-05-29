@@ -2,14 +2,14 @@
 
 [English Version](README.md) | [中文版本](README.zh-CN.md)
 
-`caiyun-weather` 是一个面向中文用户的天气查询 Skill。它通过脚本提供结构化天气数据、地理编码、风险预分级和轻量问答数据；完整天气播报由 AI 根据 `SKILL.md` 中的骨架渲染为 Markdown。
+`caiyun-weather` 是一个面向中文用户的天气查询 Skill。它通过脚本提供结构化天气数据、地理编码、风险预分级和轻量问答数据；完整天气播报由 AI 根据 `references/reporting.md` 中的骨架渲染为 Markdown。
 
 ## 功能特性
 
 - **天气查询**：支持按地址或经纬度查询实时天气、今日概况、未来小时级和日级预报。
 - **地址解析**：支持结构化地址转经纬度，也支持经纬度逆地理编码。
 - **决策字段**：提供降雨、雨具、风、紫外线、空气质量、湿度、能见度、生活指数等预分级结果。
-- **完整播报**：输出同源 `bundle` 数据（`json` + `brief`），由 AI 按 `SKILL.md` 骨架生成完整 Markdown 天气播报。
+- **完整播报**：输出同源 `bundle` 数据（`json` + `brief`），由 AI 按 `references/reporting.md` 骨架生成完整 Markdown 天气播报。
 - **离线演示**：内置 `sunny`、`rain`、`alert` mock 场景，便于演示、调试和 CI。
 - **安全边界**：脚本不会读取 `.env` 文件，不会输出 token 原值；环境变量由调用方注入。
 
@@ -106,13 +106,13 @@ Bundle 输出形态：
 
 ## 生成完整 Markdown 播报
 
-完整播报不由脚本硬编码，而是由 AI 根据 `SKILL.md` 中的「完整天气播报（骨架 + 填充规则）」渲染。
+完整播报不由脚本硬编码，而是由 AI 根据 `references/reporting.md` 中的「完整天气播报（骨架 + 填充规则）」渲染。
 
 推荐流程：
 
 1. 调用 `weather_data.py --format bundle` 一次获取同源的 `json` 和 `brief`。
 2. 使用 `bundle.brief` 做判断，使用 `bundle.json` 填充表格和详细事实。
-3. AI 按 `SKILL.md` 的播报骨架生成 Markdown。
+3. AI 按 `references/reporting.md` 的播报骨架生成 Markdown。
 4. 需要落盘时，将最终 Markdown 通过 stdin 传给 `--save`。
 
 ```bash
@@ -138,7 +138,7 @@ python3 ${SKILL_DIR}/scripts/weather_data.py --mock rain --format bundle
 
 ## 集成方式
 
-- **AI Skill**：加载本目录后，按 `SKILL.md` 的执行策略选择最小必要动作。
+- **AI Skill**：加载本目录后，按 `SKILL.md` 的执行策略选择最小必要动作；完整播报使用 `references/reporting.md`。
 - **Workflow / Cron**：由运行环境注入环境变量，完整播报调用 `weather_data.py --format bundle`，短消息调用 `--format short`。
 - **IM Bot**：短消息可直接发送 `--format short` 输出；富文本播报建议由 AI 渲染 Markdown 后发送。
 - **MCP / 工具封装**：可使用 `manifest.json` 中的 entrypoints 注册命令。

@@ -23,12 +23,34 @@ def main() -> None:
         return
 
     result = subprocess.run(
-        [sys.executable, str(SCRIPT), "--format", "bundle"],
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--lng",
+            "116.4075",
+            "--lat",
+            "39.9040",
+            "--location",
+            "北京",
+            "--format",
+            "bundle",
+        ],
         cwd=ROOT,
         text=True,
         capture_output=True,
-        check=True,
     )
+    if result.returncode != 0:
+        try:
+            payload = json.loads(result.stdout)
+        except json.JSONDecodeError as exc:
+            raise SystemExit(f"weather_data.py failed with non-JSON output: {exc}") from exc
+        error = payload.get("error") or {}
+        code = error.get("code")
+        if code in {"network_error", "timeout", "http_error"}:
+            print(f"skip - live API unavailable: {code}")
+            return
+        raise SystemExit(f"weather_data.py returned error: {error}")
+
     bundle = json.loads(result.stdout)
     if "error" in bundle:
         raise SystemExit(f"weather_data.py returned error: {bundle.get('error')}")

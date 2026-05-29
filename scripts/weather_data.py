@@ -45,6 +45,8 @@ from _common import (
     amap_quality,
     default_city,
     default_output_dir,
+    default_output_dir_display,
+    display_path,
     emit,
     env_hint,
     load_env_file,
@@ -813,7 +815,7 @@ def run_check() -> None:
             "CAIYUN_TOKEN": mask_token(token) if token else None,
             "AMAP_KEY": mask_token(key) if key else None,
             "WEATHER_DEFAULT_CITY": default_city(),
-            "WEATHER_OUTPUT_DIR": str(default_output_dir()),
+            "WEATHER_OUTPUT_DIR": default_output_dir_display(),
         },
         "caiyun": {"configured": bool(token), "ok": None, "detail": None},
         "amap": {"configured": bool(key), "ok": None, "detail": None},
@@ -1243,7 +1245,7 @@ def main() -> None:
         "provider": PROVIDER_INFO,
         "units": UNITS_INFO,
         "timezone": {"offset_hours": resolved.get("tz_offset"), "name": f"UTC{resolved.get('tz_offset'):+g}"},
-        "output_dir": str(default_output_dir()),
+        "output_dir": default_output_dir_display(),
         "cache_used": cache_used,
         "mock": args.mock,
         "date": now.strftime("%Y-%m-%d"),
@@ -1270,7 +1272,7 @@ def main() -> None:
         target = resolve_save_path(args.save, now)
         if sys.stdin.isatty():
             save_info = {
-                "path": str(target),
+                "path": display_path(target),
                 "written": False,
                 "error": "--save 需要从 stdin 读取播报 Markdown；请用管道传入，例如：echo \"$report\" | weather_data.py --save",
             }
@@ -1279,9 +1281,9 @@ def main() -> None:
             try:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(report_text, encoding="utf-8")
-                save_info = {"path": str(target), "written": True, "bytes": len(report_text.encode("utf-8"))}
+                save_info = {"path": display_path(target), "written": True, "bytes": len(report_text.encode("utf-8"))}
             except OSError as exc:
-                save_info = {"path": str(target), "written": False, "error": str(exc)}
+                save_info = {"path": display_path(target), "written": False, "error": str(exc)}
 
     if save_info is not None:
         out["save"] = save_info

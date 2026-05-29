@@ -1,7 +1,7 @@
 {
   "name": "caiyun-weather",
   "version": "6.4.0",
-  "description": "通用天气查询 Skill：脚本提供同源 bundle、完整 JSON、brief 决策字段与 short 中文摘要，含日出日落、逐分钟降雨、生活指数、能见度分级；完整天气播报由 AI 根据 SKILL.md 的骨架渲染。",
+  "description": "通用天气查询 Skill：脚本提供同源 bundle、完整 JSON、brief 决策字段与 short 中文摘要，含日出日落、逐分钟降雨、生活指数、能见度分级；完整天气播报由 AI 根据 references/reporting.md 的骨架渲染。",
   "language": "zh-CN",
   "keywords": [
     "caiyun",
@@ -53,7 +53,7 @@
     },
     {
       "id": "brief",
-      "summary": "返回结构化决策数据（risks/rain/windows/keywords 等），供 LLM 按 SKILL.md 骨架渲染完整播报；也可作为非中文/轻量卡片场景的数据源。",
+      "summary": "返回结构化决策数据（risks/rain/windows/keywords 等），供 LLM 按 references/reporting.md 骨架渲染完整播报；也可作为非中文/轻量卡片场景的数据源。",
       "command": ["python3", "scripts/weather_data.py", "--format", "brief"],
       "schema": "schemas/brief.json"
     },

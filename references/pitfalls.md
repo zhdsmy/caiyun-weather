@@ -1,5 +1,18 @@
 # Pitfalls & Architecture Notes
 
+## Table of Contents
+
+- [Architecture evolution](#architecture-evolution)
+- [Why current layout (v6.4)](#why-current-layout-v64)
+- [雨问题的三个渠道](#雨问题的三个渠道v64-后)
+- [Environment requirements](#environment-requirements)
+- [Geocoding notes from Amap docs](#geocoding-notes-from-amap-docs)
+- [Format rules from user feedback](#format-rules-from-user-feedback)
+- [String traps now avoided by data booleans](#string-traps-now-avoided-by-data-booleans)
+- [Cron / Automation notes](#cron--automation-notes)
+- [Current script paths](#current-script-paths)
+- [Non-negotiables](#non-negotiables)
+
 ## Architecture evolution
 
 | Version | Data | Text | Verdict |

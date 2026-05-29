@@ -6,7 +6,7 @@
 - to_brief(data):   结构化决策数据（供 LLM 生成自然语言 / Markdown 播报）
 - to_short(data):   3–6 行自然语言直接回答（极简场景）
 
-完整天气播报的措辞与排版由 LLM 按 SKILL.md 里的骨架规则渲染，不再由脚本硬编码。
+完整天气播报的措辞与排版由 LLM 按 references/reporting.md 里的骨架规则渲染，不再由脚本硬编码。
 函数全部不访问网络；所有规则来自 SKILL.md 的转换表和判断规则。
 """
 
@@ -721,7 +721,7 @@ def to_brief(data: dict[str, Any]) -> dict[str, Any]:
     """生成结构化决策数据。
 
     这是 LLM 生成完整播报的**主要数据源**——所有"该说什么"的判断已经预先做好，
-    LLM 只负责按 SKILL.md 的骨架渲染"怎么说"。字段契约：
+    LLM 只负责按 references/reporting.md 的骨架渲染"怎么说"。字段契约：
 
     - `headline` / `one_liner`：可直接使用的极简摘要
     - `keywords`：2–4 个出门关键词

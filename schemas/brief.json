@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "caiyun-weather/schemas/brief.json",
   "title": "Caiyun Weather Brief",
-  "description": "结构化决策数据：供 LLM 按 SKILL.md 骨架渲染完整播报，也可作为非中文/轻量卡片场景的直接数据源。",
+  "description": "结构化决策数据：供 LLM 按 references/reporting.md 骨架渲染完整播报，也可作为非中文/轻量卡片场景的直接数据源。",
   "type": "object",
   "required": ["location", "headline", "one_liner", "keywords", "temp", "sky", "wind", "rain", "umbrella", "risks"],
   "properties": {

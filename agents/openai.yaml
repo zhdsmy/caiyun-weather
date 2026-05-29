@@ -1,0 +1,4 @@
+interface:
+  display_name: "Caiyun Weather"
+  short_description: "Query Caiyun weather and render reports"
+  default_prompt: "Use $caiyun-weather to check the weather, rain risk, and travel advice for my location."

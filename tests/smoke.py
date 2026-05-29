@@ -127,6 +127,8 @@ def test_mock_bundle_contract() -> None:
     assert data["brief"]["rain"]["peak_window"] == data["brief"]["rain"]["windows"][0]
     assert data["brief"]["rain"]["first_window"] == data["brief"]["rain"]["windows_chronological"][0]
     assert data["brief"]["today_split"]["full_day_precip_max"] == data["json"]["today"]["precip_max"]
+    assert data["json"]["output_dir"].startswith("~")
+    assert str(Path.home()) not in data["json"]["output_dir"]
 
 
 def test_mock_short_contract() -> None:

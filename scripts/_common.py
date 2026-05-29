@@ -231,6 +231,25 @@ def default_output_dir() -> Path:
     return Path.home() / ".cache" / "caiyun-weather" / "outputs"
 
 
+def display_path(path: Path) -> str:
+    """Return a user-facing path without exposing the local home directory."""
+    try:
+        resolved = path.expanduser().resolve()
+        home = Path.home().resolve()
+        return "~" if resolved == home else f"~/{resolved.relative_to(home)}"
+    except ValueError:
+        return str(path)
+    except Exception:  # noqa: BLE001 - display helper must not break CLI output
+        return str(path)
+
+
+def default_output_dir_display() -> str:
+    raw = os.environ.get("WEATHER_OUTPUT_DIR")
+    if raw:
+        return display_path(Path(raw))
+    return "~/.cache/caiyun-weather/outputs"
+
+
 def env_hint() -> str:
     """通用化提示：仅说明缺什么环境变量，不指引具体加载路径。"""
     return "请通过调用方所在的 AI 工具或 shell 注入相应环境变量后重试。"
